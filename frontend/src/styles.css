@@ -13,3 +13,92 @@
 .call-now{border:0;background:#5b2bd9;color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
 .offline-note{text-align:center;color:#777;font-size:13px;line-height:1.5;margin:15px 20px 0}
 .helplines .row{cursor:pointer}.helplines .grow small{font-size:18px;color:#777}.offline{color:#777;line-height:1.5}
+/* Trusted Contact Buttons */
+
+.contact-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.edit-btn {
+  background: white;
+  color: #6c4ba5;
+  border: 1px solid #6c4ba5;
+}
+
+.edit-btn:hover {
+  background: #6c4ba5;
+  color: white;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+
+.delete-btn:hover {
+  background: #b52a37;
+}
+
+.contact-info {
+  flex: 1;
+}
+/* ===== Trusted Contact Edit/Delete Final Fix ===== */
+
+.contact {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.contact-info {
+  flex: 1;
+}
+
+.contact-actions {
+  margin-left: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  width: 90px !important;
+}
+
+.contact-actions .edit-btn,
+.contact-actions .delete-btn {
+  display: block !important;
+  position: static !important;
+  width: 90px !important;
+  height: 40px !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.contact-actions .edit-btn {
+  background: #6c4ba5 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.contact-actions .delete-btn {
+  background: #dc3545 !important;
+  color: white !important;
+  border: none !important;
+}
