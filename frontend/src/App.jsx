@@ -6,6 +6,7 @@ import Emergency from "./pages/Emergency.jsx";
 import Imsafe from "./pages/Imsafe.jsx";
 import Profile from "./pages/Profile.jsx";
 import Trustedcontact from "./pages/Trustedcontact.jsx";
+import ReportForm from "./components/ReportForm.jsx";
 
 function App() {
   return (
@@ -17,9 +18,10 @@ function App() {
         <Route path="/imsafe" element={<Imsafe />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/trusted-contact" element={<Trustedcontact />} />
+        <Route path="/report" element={<ReportForm />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
-export default App;
+export default App; 
