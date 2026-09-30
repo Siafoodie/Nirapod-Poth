@@ -7,6 +7,7 @@ import Imsafe from "./pages/Imsafe.jsx";
 import Profile from "./pages/Profile.jsx";
 import Trustedcontact from "./pages/Trustedcontact.jsx";
 import ReportForm from "./components/ReportForm.jsx";
+import EmergencySOS from "./components/EmergencySOS.jsx"; // 1. Component import kora hoyeche
 
 function App() {
   return (
@@ -22,7 +23,7 @@ function App() {
         <Route path="/register" element={<Auth register={true} />} />
 
         {/* App Pages */}
-        <Route path="/emergency" element={<Emergency />} />
+        <Route path="/emergency" element={<EmergencySOS />} /> {/* 2. EmergencySOS route-e set kora hoyeche */}
         <Route path="/imsafe" element={<Imsafe />} />
         <Route path="/profile" element={<Profile />} />
         <Route
@@ -37,4 +38,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;  
