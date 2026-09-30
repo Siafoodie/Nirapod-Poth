@@ -6,3 +6,13 @@ describe("validatePhone", () => {
     expect(validatePhone("")).toBe("Phone number is required");
   });
 });
+
+test("should return null for a valid Bangladeshi phone number", () => {
+  expect(validatePhone("01712345678")).toBe(null);
+});
+
+test("should return error for an invalid phone number", () => {
+  expect(validatePhone("01212345678")).toBe(
+    "Invalid phone number! Must be 11 digits starting with 01"
+  );
+});
