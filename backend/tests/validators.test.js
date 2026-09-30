@@ -16,3 +16,9 @@ test("should return error for an invalid phone number", () => {
     "Invalid phone number! Must be 11 digits starting with 01"
   );
 });
+
+test("should return error when phone number length is invalid", () => {
+  expect(validatePhone("0171234567")).toBe(
+    "Invalid phone number! Must be 11 digits starting with 01"
+  );
+});
