@@ -1,27 +1,59 @@
-import { useState, useEffect } from 'react';
+import { useState } from "react";
 
-const useGeolocation = () => {
-  const [location, setLocation] = useState({ latitude: null, longitude: null });
-  const [error, setError] = useState(null);
+export default function useGeolocation() {
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
-      return;
+  // Get user's current location
+  const getCurrentPosition = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        const message = "Geolocation is not supported by this browser.";
+
+        setError(message);
+        reject(new Error(message));
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+          setLoading(false);
+          setError("");
+
+          resolve(coords);
+        },
+
+        (err) => {
+          setLoading(false);
+          setError(err.message);
+
+          reject(err);
+        }
+      );
+    });
+  };
+
+  // Generate Google Maps link from coordinates
+  const getMapsLink = (coords) => {
+    if (!coords || coords.lat == null || coords.lng == null) {
+      return "";
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-      },
-      (err) => setError(err.message)
-    );
-  }, []);
+    return `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
+  };
 
-  return { location, error };
-};
-
-export default useGeolocation;  
+  return {
+    error,
+    loading,
+    getCurrentPosition,
+    getMapsLink,
+  };
+}
