@@ -44,3 +44,6 @@ test("should return error when text contains only spaces", () => {
 test("should return error with custom field name", () => {
   expect(validateRequired("", "Email")).toBe("Email cannot be empty");
 });
+test("should return null for valid text", () => {
+  expect(validateRequired("Tanvir")).toBe(null);
+});
