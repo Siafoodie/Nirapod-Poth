@@ -28,3 +28,7 @@ test("should return error when phone number contains non-digit characters", () =
     "Invalid phone number! Must be 11 digits starting with 01"
   );
 });
+
+test("should return null for a valid phone number starting with 019", () => {
+  expect(validatePhone("01912345678")).toBe(null);
+});
