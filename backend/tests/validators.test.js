@@ -32,3 +32,8 @@ test("should return error when phone number contains non-digit characters", () =
 test("should return null for a valid phone number starting with 019", () => {
   expect(validatePhone("01912345678")).toBe(null);
 });
+describe("validateRequired", () => {
+  test("should return error when text is empty", () => {
+    expect(validateRequired("")).toBe("This field cannot be empty");
+  });
+});
