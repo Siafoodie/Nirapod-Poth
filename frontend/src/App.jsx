@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import RouteSafety from "./pages/RouteSafety.jsx";
 import Home from "./pages/Home.jsx";
 import Auth from "./pages/Auth.jsx";
 import Emergency from "./pages/Emergency.jsx";
@@ -26,6 +26,7 @@ function App() {
         <Route path="/emergency" element={<EmergencySOS />} /> {/* 2. EmergencySOS route-e set kora hoyeche */}
         <Route path="/imsafe" element={<Imsafe />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/route-safety" element={<RouteSafety />} />
         <Route
           path="/trusted-contact"
           element={<Trustedcontact />}
