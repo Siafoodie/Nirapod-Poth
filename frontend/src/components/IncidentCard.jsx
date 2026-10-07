@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { api } from '../api';
 
 export default function IncidentCard({ report }) {
-  const [votes, setVotes] = useState(report?.score || 4);
+  const [votes, setVotes] = useState(report?.score ?? 0);
   const [userVote, setUserVote] = useState(null); // 'up', 'down', or null
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleUpvote = async () => {
-    
     const previousVotes = votes;
     const previousUserVote = userVote;
 
@@ -22,22 +22,33 @@ export default function IncidentCard({ report }) {
       setUserVote('up');
     }
 
-    if (!report?._id) return;
+    if (!report?._id) {
+      setError('This report cannot be voted on because it has no ID.');
+      setVotes(previousVotes);
+      setUserVote(previousUserVote);
+      return;
+    }
 
     try {
       setLoading(true);
-      const response = await axios.post(`http://localhost:5000/api/reports/${report._id}/upvote`);
-      if (response.data && response.data.score !== undefined) {
-        setVotes(response.data.score);
-      }
+      setError('');
+      const response = await api(`/reports/${report._id}/upvote`, {
+        method: 'POST',
+      });
+      if (response.score !== undefined) setVotes(response.score);
     } catch (error) {
-      console.warn("Backend API not reached or ID not in DB, using local state instead.");
+      setVotes(previousVotes);
+      setUserVote(previousUserVote);
+      setError(error.message || 'Unable to submit your vote.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDownvote = async () => {
+    const previousVotes = votes;
+    const previousUserVote = userVote;
+
     if (userVote === 'down') {
       setVotes(votes + 1);
       setUserVote(null);
@@ -49,16 +60,24 @@ export default function IncidentCard({ report }) {
       setUserVote('down');
     }
 
-    if (!report?._id) return;
+    if (!report?._id) {
+      setError('This report cannot be voted on because it has no ID.');
+      setVotes(previousVotes);
+      setUserVote(previousUserVote);
+      return;
+    }
 
     try {
       setLoading(true);
-      const response = await axios.post(`http://localhost:5000/api/reports/${report._id}/downvote`);
-      if (response.data && response.data.score !== undefined) {
-        setVotes(response.data.score);
-      }
+      setError('');
+      const response = await api(`/reports/${report._id}/downvote`, {
+        method: 'POST',
+      });
+      if (response.score !== undefined) setVotes(response.score);
     } catch (error) {
-      console.warn("Backend API not reached or ID not in DB, using local state instead.");
+      setVotes(previousVotes);
+      setUserVote(previousUserVote);
+      setError(error.message || 'Unable to submit your vote.');
     } finally {
       setLoading(false);
     }
@@ -127,6 +146,11 @@ export default function IncidentCard({ report }) {
       </p>
 
       {/* Voting Footer */}
+      {error && (
+        <p role="alert" style={{ color: '#b42318', fontSize: '12px' }}>
+          {error}
+        </p>
+      )}
       <div style={{
         display: 'flex',
         alignItems: 'center',

@@ -3,16 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { Diamond, Circle } from "lucide-react";
 import Layout from "../components/Layout";
 import { Row } from "../components/UI";
-import { api } from "../api";
+import { API_BASE_URL, api } from "../api";
 
 export default function Profile() {
   const navigate = useNavigate();
+  const cachedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
 
   const [profile, setProfile] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    profileImage: "",
+    name: cachedUser.name || "",
+    email: cachedUser.email || "",
+    phone: cachedUser.phone || "",
+    profileImage: cachedUser.profileImage || "",
   });
 
   const [editData, setEditData] = useState({
@@ -38,9 +45,6 @@ export default function Profile() {
 
         const data = await api("/profile");
 
-        // DEBUG: Check what backend sends
-        console.log("PROFILE DATA:", data.user);
-
         setProfile({
           name: data.user.name || "",
           email: data.user.email || "",
@@ -54,7 +58,11 @@ export default function Profile() {
         });
       } catch (err) {
         console.error("PROFILE LOAD ERROR:", err);
-        setError(err.message || "Failed to load profile");
+        setError(
+          profile.name || profile.email
+            ? `${err.message || "Failed to load profile"} Showing saved account information.`
+            : err.message || "Failed to load profile",
+        );
       } finally {
         setLoading(false);
       }
@@ -84,8 +92,6 @@ export default function Profile() {
           phone: editData.phone.trim(),
         }),
       });
-
-      console.log("UPDATED PROFILE:", data.user);
 
       setProfile({
         name: data.user.name || "",
@@ -160,7 +166,7 @@ export default function Profile() {
       }
 
       const response = await fetch(
-        "http://localhost:5000/api/profile/image",
+        `${API_BASE_URL}/profile/image`,
         {
           method: "POST",
           headers: {
@@ -174,19 +180,12 @@ export default function Profile() {
         .json()
         .catch(() => ({}));
 
-      console.log("IMAGE UPLOAD RESPONSE:", data);
-
       if (!response.ok) {
         throw new Error(
           data.message ||
             "Failed to upload profile image"
         );
       }
-
-      console.log(
-        "PROFILE IMAGE PATH:",
-        data.user?.profileImage
-      );
 
       setProfile({
         name: data.user.name || "",
@@ -266,14 +265,11 @@ export default function Profile() {
           <div className="avatar">
             {profile.profileImage ? (
               <img
-                src={`http://localhost:5000${profile.profileImage}`}
+                src={`${API_BASE_URL.replace(/\/api\/?$/, "")}${profile.profileImage}`}
                 alt={`${profile.name || "User"} profile`}
                 className="profile-avatar-image"
                 onError={(e) => {
-                  console.error(
-                    "IMAGE FAILED TO LOAD:",
-                    e.currentTarget.src
-                  );
+                  e.currentTarget.style.display = "none";
                 }}
               />
             ) : (
