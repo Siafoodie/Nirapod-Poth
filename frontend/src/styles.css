@@ -904,6 +904,15 @@ textarea:focus-visible {
   color: #777;
 }
 
+.safe-intro small {
+  color: #777;
+  font-size: 11px;
+}
+
+.safe-intro small a {
+  color: var(--app-brand);
+}
+
 .safe-search input {
   min-width: 0;
   flex: 1;
@@ -926,8 +935,21 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
+.safe-search button[type="submit"] {
+  width: auto;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .safe-locate:disabled {
   opacity: .55;
+}
+
+.safe-location-label {
+  margin: 8px 4px 0;
+  color: #666;
+  font-size: 12px;
 }
 
 .safe-inline-error {
@@ -1041,6 +1063,10 @@ textarea:focus-visible {
 
 .safe-place-marker-shelter {
   background: #2185d0;
+}
+
+.safe-place-marker-fire-station {
+  background: #e87422;
 }
 
 .safe-map-popup {
