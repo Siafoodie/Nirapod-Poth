@@ -25,6 +25,18 @@ const reportSchema = new mongoose.Schema(
       enum: ["pending", "reviewed", "resolved"],
       default: "pending",
     },
+
+    upvotes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    downvotes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
