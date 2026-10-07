@@ -9,12 +9,14 @@ import Trustedcontact from "./pages/Trustedcontact.jsx";
 import ReportForm from "./components/ReportForm.jsx";
 import SafePlaces from "./pages/SafePlaces.jsx";
 import EmergencySOS from "./components/EmergencySOS.jsx";
+import NearbyReports from "./pages/NearbyReports.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/nearby-reports" element={<NearbyReports />} />
         <Route path="/home" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/login" element={<Auth />} />
