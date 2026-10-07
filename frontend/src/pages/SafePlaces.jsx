@@ -200,7 +200,6 @@ export default function SafePlaces() {
       });
   }, [activeFilter, places, search, userLocation]);
 
-  const selectedPlace = filteredPlaces.find((place) => place.id === selectedId);
   const mapPlaces = filteredPlaces.filter((place) => place.coordinates);
   const center = userLocation || mapPlaces[0]?.coordinates || DEFAULT_CENTER;
 

@@ -34,8 +34,12 @@ const useGeolocation = () => {
       );
     });
 
-  const getMapsLink = ({ lat, lng }) =>
-    `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`;
+  const getMapsLink = (coords) => {
+    if (!coords || coords.lat == null || coords.lng == null) {
+      return "";
+    }
+    return `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
+  };
 
   return { error, loading, getCurrentPosition, getMapsLink };
 };

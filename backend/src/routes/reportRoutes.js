@@ -1,6 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Report = require('../models/Report');
+const {
+  upvoteReport,
+  downvoteReport,
+} = require('../controllers/voteController');
+const voteRateLimiter = require('../middleware/voteRateLimiter');
 
 const router = express.Router();
 
@@ -10,8 +15,12 @@ const MAX_LIMIT = 100;
 const toReportResponse = (report, voterId) => {
   const data = report.toObject ? report.toObject() : report;
   const { votes = [], ...reportData } = data;
-  const upvotes = votes.filter((vote) => vote.value === 'upvote').length;
-  const downvotes = votes.filter((vote) => vote.value === 'downvote').length;
+  const upvotes =
+    (data.upvotes || 0) +
+    votes.filter((vote) => vote.value === 'upvote').length;
+  const downvotes =
+    (data.downvotes || 0) +
+    votes.filter((vote) => vote.value === 'downvote').length;
 
   return {
     ...reportData,
@@ -143,7 +152,7 @@ router.post('/', async (req, res) => {
   });
 });
 
-router.post('/:reportId/vote', async (req, res) => {
+router.post('/:reportId/vote', voteRateLimiter, async (req, res) => {
   const { reportId } = req.params;
 
   if (!mongoose.isValidObjectId(reportId)) {
@@ -214,6 +223,35 @@ router.post('/:reportId/vote', async (req, res) => {
   return res.json({
     success: true,
     data: toReportResponse(report, normalizedVoterId),
+  });
+});
+
+router.post('/:id/upvote', voteRateLimiter, upvoteReport);
+router.post('/:id/downvote', voteRateLimiter, downvoteReport);
+router.get('/:id/score', async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid report ID',
+    });
+  }
+
+  const report = await Report.findById(req.params.id).select(
+    'upvotes downvotes votes',
+  );
+  if (!report) {
+    return res.status(404).json({
+      success: false,
+      message: 'Report not found',
+    });
+  }
+
+  const score = toReportResponse(report);
+  return res.status(200).json({
+    success: true,
+    upvotes: score.upvotes,
+    downvotes: score.downvotes,
+    score: score.score,
   });
 });
 
