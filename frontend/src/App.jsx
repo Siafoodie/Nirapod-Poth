@@ -1,3 +1,5 @@
+import SafePlaces from "./pages/SafePlaces.jsx";
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import RouteSafety from "./pages/RouteSafety.jsx";
 import Home from "./pages/Home.jsx";
@@ -16,6 +18,8 @@ function App() {
         {/* Home */}
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/route-safety" element={<RouteSafety />} />
+<Route path="/safe-places" element={<SafePlaces />} />
 
         {/* Authentication */}
         <Route path="/auth" element={<Auth />} />
