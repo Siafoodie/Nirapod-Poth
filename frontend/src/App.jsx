@@ -1,5 +1,3 @@
-import SafePlaces from "./pages/SafePlaces.jsx";
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import RouteSafety from "./pages/RouteSafety.jsx";
 import Home from "./pages/Home.jsx";
@@ -9,38 +7,30 @@ import Imsafe from "./pages/Imsafe.jsx";
 import Profile from "./pages/Profile.jsx";
 import Trustedcontact from "./pages/Trustedcontact.jsx";
 import ReportForm from "./components/ReportForm.jsx";
-import EmergencySOS from "./components/EmergencySOS.jsx"; // 1. Component import kora hoyeche
+import SafePlaces from "./pages/SafePlaces.jsx";
+import EmergencySOS from "./components/EmergencySOS.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Home */}
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/route-safety" element={<RouteSafety />} />
-<Route path="/safe-places" element={<SafePlaces />} />
-
-        {/* Authentication */}
         <Route path="/auth" element={<Auth />} />
         <Route path="/login" element={<Auth />} />
         <Route path="/register" element={<Auth register={true} />} />
-
-        {/* App Pages */}
-        <Route path="/emergency" element={<EmergencySOS />} /> {/* 2. EmergencySOS route-e set kora hoyeche */}
+        <Route path="/emergency" element={<Emergency />} />
+        <Route path="/emergency-sos" element={<EmergencySOS />} />
         <Route path="/imsafe" element={<Imsafe />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/route-safety" element={<RouteSafety />} />
-        <Route
-          path="/trusted-contact"
-          element={<Trustedcontact />}
-        />
-
-        {/* Incident Report */}
+        <Route path="/trusted-contact" element={<Trustedcontact />} />
         <Route path="/report" element={<ReportForm />} />
+        <Route path="/safe-places" element={<SafePlaces />} />
+        <Route path="/map" element={<SafePlaces />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
-export default App;  
+export default App; 

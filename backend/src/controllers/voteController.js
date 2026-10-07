@@ -1,6 +1,18 @@
 const mongoose = require("mongoose");
 const Report = require("../models/Report");
 
+const getTotals = (report) => {
+  const votes = report.votes || [];
+  const upvotes =
+    (report.upvotes || 0) +
+    votes.filter((vote) => vote.value === "upvote").length;
+  const downvotes =
+    (report.downvotes || 0) +
+    votes.filter((vote) => vote.value === "downvote").length;
+
+  return { upvotes, downvotes, score: upvotes - downvotes };
+};
+
 // Upvote a report
 const upvoteReport = async (req, res) => {
   try {
@@ -29,9 +41,7 @@ const upvoteReport = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Report upvoted successfully",
-      upvotes: report.upvotes,
-      downvotes: report.downvotes,
-      score: report.upvotes - report.downvotes,
+      ...getTotals(report),
     });
   } catch (error) {
     return res.status(500).json({
@@ -70,9 +80,7 @@ const downvoteReport = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Report downvoted successfully",
-      upvotes: report.upvotes,
-      downvotes: report.downvotes,
-      score: report.upvotes - report.downvotes,
+      ...getTotals(report),
     });
   } catch (error) {
     return res.status(500).json({
@@ -95,7 +103,9 @@ const getVoteScore = async (req, res) => {
       });
     }
 
-    const report = await Report.findById(id).select("upvotes downvotes");
+    const report = await Report.findById(id).select(
+      "upvotes downvotes votes"
+    );
 
     if (!report) {
       return res.status(404).json({
@@ -104,14 +114,9 @@ const getVoteScore = async (req, res) => {
       });
     }
 
-    const upvotes = report.upvotes || 0;
-    const downvotes = report.downvotes || 0;
-
     return res.status(200).json({
       success: true,
-      upvotes,
-      downvotes,
-      score: upvotes - downvotes,
+      ...getTotals(report),
     });
   } catch (error) {
     return res.status(500).json({

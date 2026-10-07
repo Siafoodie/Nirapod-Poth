@@ -1,384 +1,408 @@
-import React, { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  Building2,
+  Crosshair,
+  Hospital,
+  MapPin,
+  Navigation,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { api } from "../api";
+import useGeolocation from "../hooks/useGeolocation";
 
-const SafePlaces = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [category, setCategory] = useState("All");
-  const [selectedPlace, setSelectedPlace] = useState(null);
+const DEFAULT_CENTER = [23.8103, 90.4125];
+const FILTERS = [
+  { id: "all", label: "All places" },
+  { id: "police", label: "Police" },
+  { id: "hospital", label: "Hospitals" },
+  { id: "pharmacy", label: "Pharmacies" },
+  { id: "shelter", label: "Safe spaces" },
+];
 
-  // Demo data until Safe Places backend API is available
-  const safePlaces = [
-    {
-      id: 1,
-      name: "Dhanmondi Police Station",
-      category: "Police",
-      address: "Dhanmondi, Dhaka",
-      latitude: 23.7465,
-      longitude: 90.376,
-      phone: "999",
-    },
-    {
-      id: 2,
-      name: "Popular Medical College Hospital",
-      category: "Hospital",
-      address: "Dhanmondi, Dhaka",
-      latitude: 23.738,
-      longitude: 90.372,
-      phone: "09613-787800",
-    },
-    {
-      id: 3,
-      name: "Mohammadpur Fire Station",
-      category: "Fire Station",
-      address: "Mohammadpur, Dhaka",
-      latitude: 23.758,
-      longitude: 90.358,
-      phone: "16163",
-    },
-    {
-      id: 4,
-      name: "Square Hospital",
-      category: "Hospital",
-      address: "Panthapath, Dhaka",
-      latitude: 23.752,
-      longitude: 90.381,
-      phone: "10616",
-    },
-  ];
+const getCoordinates = (place) => {
+  const geoCoordinates = place.geo?.coordinates || place.coordinates;
+  const latitude = Number(
+    place.latitude ?? place.lat ?? (geoCoordinates && geoCoordinates[1]),
+  );
+  const longitude = Number(
+    place.longitude ?? place.lng ?? (geoCoordinates && geoCoordinates[0]),
+  );
 
-  const categories = ["All", "Police", "Hospital", "Fire Station"];
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+
+  return [latitude, longitude];
+};
+
+const getCategory = (place) => {
+  const category = `${place.category || ""} ${place.type || ""} ${
+    place.placeType || ""
+  } ${place.name || place.title || ""}`.toLowerCase();
+
+  if (category.includes("police") || category.includes("law")) return "police";
+  if (category.includes("hospital") || category.includes("clinic")) {
+    return "hospital";
+  }
+  if (category.includes("pharmacy") || category.includes("pharma")) {
+    return "pharmacy";
+  }
+  return "shelter";
+};
+
+const normalizePlace = (place) => {
+  if (!place || typeof place !== "object") return null;
+
+  const name = place.name || place.title;
+  if (typeof name !== "string" || !name.trim()) return null;
+
+  return {
+    ...place,
+    id: place._id || place.id || `${name}-${place.address || ""}`,
+    name: name.trim(),
+    address:
+      typeof place.address === "string"
+        ? place.address
+        : typeof place.location === "string"
+          ? place.location
+          : "",
+    category: getCategory(place),
+    coordinates: getCoordinates(place),
+  };
+};
+
+const getDirectionsUrl = (place) => {
+  const destination = place.coordinates
+    ? `${place.coordinates[0]},${place.coordinates[1]}`
+    : [place.name, place.address].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    destination,
+  )}`;
+};
+
+const getDistanceKm = (from, to) => {
+  if (!from || !to) return null;
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
+  const [lat1, lon1] = from.map(toRadians);
+  const [lat2, lon2] = to.map(toRadians);
+  const latitudeDelta = lat2 - lat1;
+  const longitudeDelta = lon2 - lon1;
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(longitudeDelta / 2) ** 2;
+
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const MapCenter = ({ center }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+
+  return null;
+};
+
+const markerIcons = {
+  police: "P",
+  hospital: "+",
+  pharmacy: "Rx",
+  shelter: "✓",
+};
+
+const createMarkerIcon = (category) =>
+  L.divIcon({
+    className: "safe-place-marker-wrap",
+    html: `<span class="safe-place-marker safe-place-marker-${category}"><i>${markerIcons[category]}</i></span>`,
+    iconSize: [38, 46],
+    iconAnchor: [19, 44],
+    popupAnchor: [0, -42],
+  });
+
+export default function SafePlaces() {
+  const [places, setPlaces] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const { getCurrentPosition, loading: locating, error: locationError } =
+    useGeolocation();
+
+  useEffect(() => {
+    let isActive = true;
+
+    api("/safe-places")
+      .then((response) => {
+        const entries = Array.isArray(response)
+          ? response
+          : response.data || response.safePlaces || response.places;
+
+        if (!Array.isArray(entries)) {
+          throw new Error("The safe-place directory is not available yet.");
+        }
+        if (isActive) setPlaces(entries.map(normalizePlace).filter(Boolean));
+      })
+      .catch((error) => {
+        if (isActive) {
+          setLoadError(error.message || "Unable to load safe places.");
+        }
+      })
+      .finally(() => {
+        if (isActive) setLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const filteredPlaces = useMemo(() => {
-    return safePlaces.filter((place) => {
-      const matchesCategory =
-        category === "All" || place.category === category;
+    const query = search.trim().toLowerCase();
+    return places
+      .filter(
+        (place) => activeFilter === "all" || place.category === activeFilter,
+      )
+      .filter(
+        (place) =>
+          !query ||
+          `${place.name} ${place.address} ${place.category}`
+            .toLowerCase()
+            .includes(query),
+      )
+      .sort((first, second) => {
+        const firstDistance = getDistanceKm(
+          userLocation,
+          first.coordinates,
+        );
+        const secondDistance = getDistanceKm(
+          userLocation,
+          second.coordinates,
+        );
+        if (firstDistance === null) return 1;
+        if (secondDistance === null) return -1;
+        return firstDistance - secondDistance;
+      });
+  }, [activeFilter, places, search, userLocation]);
 
-      const search = searchTerm.toLowerCase();
+  const mapPlaces = filteredPlaces.filter((place) => place.coordinates);
+  const center = userLocation || mapPlaces[0]?.coordinates || DEFAULT_CENTER;
 
-      const matchesSearch =
-        place.name.toLowerCase().includes(search) ||
-        place.address.toLowerCase().includes(search);
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [searchTerm, category]);
-
-  const navigateToPlace = (place) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const viewOnMap = (place) => {
-    setSelectedPlace(place);
-
-    setTimeout(() => {
-      document
-        .getElementById("safe-place-map")
-        ?.scrollIntoView({ behavior: "smooth" });
-    }, 0);
-  };
-
-  const getMarkerPosition = (place) => {
-    const positions = {
-      1: { top: "25%", left: "30%" },
-      2: { top: "55%", left: "42%" },
-      3: { top: "35%", left: "68%" },
-      4: { top: "68%", left: "72%" },
-    };
-
-    return positions[place.id] || { top: "50%", left: "50%" };
+  const locateMe = async () => {
+    try {
+      const position = await getCurrentPosition();
+      setUserLocation([position.lat, position.lng]);
+    } catch {
+      // The hook exposes the location error to the user.
+    }
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "1100px",
-        margin: "0 auto",
-        padding: "40px 20px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1 style={{ marginBottom: "8px" }}>Safe Places Directory</h1>
+    <main className="safe-directory">
+      <header className="safe-directory-header">
+        <Link
+          className="safe-back"
+          to="/"
+          aria-label="Back to home"
+        >
+          <ArrowLeft size={21} />
+        </Link>
+        <div>
+          <span className="safe-eyebrow">NIRAPOD POTH</span>
+          <h1>Safe places</h1>
+        </div>
+        <ShieldCheck className="safe-header-icon" size={28} />
+      </header>
 
-      <p style={{ color: "#666", marginBottom: "25px" }}>
-        Browse nearby safe places, view their locations, and start navigation
-        with one tap.
-      </p>
+      <section className="safe-intro">
+        <h2>Find help nearby</h2>
+        <p>Browse trusted places and get directions with one tap.</p>
+      </section>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search by place name or location..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "13px 15px",
-          border: "1px solid #d1d5db",
-          borderRadius: "8px",
-          fontSize: "15px",
-          marginBottom: "15px",
-        }}
-      />
+      <div className="safe-search">
+        <Search size={20} aria-hidden="true" />
+        <input
+          aria-label="Search safe places"
+          type="search"
+          placeholder="Search by place or address"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <button
+          type="button"
+          className="safe-locate"
+          onClick={locateMe}
+          disabled={locating}
+          aria-label="Use my current location"
+          title="Use my current location"
+        >
+          <Crosshair size={20} />
+        </button>
+      </div>
+      {locationError && <p className="safe-inline-error">{locationError}</p>}
 
-      {/* Category filters */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
-          marginBottom: "25px",
-        }}
-      >
-        {categories.map((item) => (
+      <nav className="safe-filters" aria-label="Filter places by type">
+        {FILTERS.map((filter) => (
           <button
-            key={item}
             type="button"
-            onClick={() => setCategory(item)}
-            style={{
-              padding: "9px 16px",
-              borderRadius: "20px",
-              border:
-                category === item
-                  ? "1px solid #2563eb"
-                  : "1px solid #d1d5db",
-              backgroundColor:
-                category === item ? "#2563eb" : "#ffffff",
-              color: category === item ? "#ffffff" : "#333333",
-              cursor: "pointer",
-              fontWeight: "600",
-            }}
+            key={filter.id}
+            className={activeFilter === filter.id ? "active" : ""}
+            aria-pressed={activeFilter === filter.id}
+            onClick={() => setActiveFilter(filter.id)}
           >
-            {item}
+            {filter.label}
           </button>
         ))}
-      </div>
+      </nav>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "18px",
-          marginBottom: "35px",
-        }}
-      >
-        {filteredPlaces.map((place) => (
-          <div
-            key={place.id}
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "12px",
-              padding: "20px",
-              backgroundColor: "#ffffff",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-            }}
-          >
-            <span
-              style={{
-                display: "inline-block",
-                backgroundColor: "#eff6ff",
-                color: "#1d4ed8",
-                padding: "5px 10px",
-                borderRadius: "15px",
-                fontSize: "12px",
-                fontWeight: "bold",
-                marginBottom: "10px",
-              }}
-            >
-              {place.category}
+      <section className="safe-map-section" aria-label="Safe places map">
+        <div className="safe-map-title">
+          <div>
+            <h2>Map view</h2>
+            <span>
+              {mapPlaces.length
+                ? `${mapPlaces.length} place${mapPlaces.length === 1 ? "" : "s"} shown`
+                : "Map markers appear when location data is available"}
             </span>
-
-            <h2
-              style={{
-                fontSize: "19px",
-                marginTop: "5px",
-                marginBottom: "8px",
-              }}
-            >
-              {place.name}
-            </h2>
-
-            <p style={{ color: "#555", margin: "6px 0" }}>
-              {place.address}
-            </p>
-
-            <p style={{ color: "#555", margin: "6px 0 18px" }}>
-              Phone: {place.phone}
-            </p>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "10px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => viewOnMap(place)}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #2563eb",
-                  backgroundColor: "#ffffff",
-                  color: "#2563eb",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                View on Map
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigateToPlace(place)}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "none",
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                Navigate
-              </button>
-            </div>
           </div>
-        ))}
-      </div>
-
-      {filteredPlaces.length === 0 && (
-        <p
-          style={{
-            textAlign: "center",
-            padding: "25px",
-            color: "#666",
-          }}
+          <MapPin size={20} aria-hidden="true" />
+        </div>
+        <MapContainer
+          center={center}
+          zoom={13}
+          scrollWheelZoom={false}
+          className="safe-map"
         >
-          No safe places found.
-        </p>
-      )}
-
-      {/* Map preview */}
-      <div
-        id="safe-place-map"
-        style={{
-          marginTop: "20px",
-        }}
-      >
-        <h2>Map</h2>
-
-        <p style={{ color: "#666" }}>
-          Select a marker or choose "View on Map" from the directory.
-        </p>
-
-        <div
-          style={{
-            height: "380px",
-            position: "relative",
-            overflow: "hidden",
-            borderRadius: "14px",
-            border: "1px solid #d1d5db",
-            background:
-              "linear-gradient(135deg, #eef6ee 0%, #f8fafc 45%, #e6f0f8 100%)",
-          }}
-        >
-          {/* Simple roads for map-style visualization */}
-          <div
-            style={{
-              position: "absolute",
-              width: "120%",
-              height: "12px",
-              backgroundColor: "#ffffff",
-              top: "48%",
-              left: "-10%",
-              transform: "rotate(-8deg)",
-            }}
+          <MapCenter center={center} />
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          {mapPlaces.map((place) => (
+            <Marker
+              key={place.id}
+              position={place.coordinates}
+              icon={createMarkerIcon(place.category)}
+              eventHandlers={{ click: () => setSelectedId(place.id) }}
+            >
+              <Popup>
+                <div className="safe-map-popup">
+                  <strong>{place.name}</strong>
+                  {place.address && <span>{place.address}</span>}
+                  <a
+                    href={getDirectionsUrl(place)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Navigation size={14} /> Navigate
+                  </a>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+          {userLocation && (
+            <Marker
+              position={userLocation}
+              icon={L.divIcon({
+                className: "user-location-wrap",
+                html: '<span class="user-location-dot"></span>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10],
+              })}
+            />
+          )}
+        </MapContainer>
+      </section>
 
-          <div
-            style={{
-              position: "absolute",
-              width: "12px",
-              height: "120%",
-              backgroundColor: "#ffffff",
-              left: "52%",
-              top: "-10%",
-              transform: "rotate(12deg)",
-            }}
-          />
+      <section className="safe-directory-list" aria-live="polite">
+        <div className="safe-list-title">
+          <div>
+            <h2>Directory</h2>
+            <span>
+              {loading
+                ? "Loading places..."
+                : `${filteredPlaces.length} place${filteredPlaces.length === 1 ? "" : "s"}`}
+            </span>
+          </div>
+        </div>
 
+        {loadError && (
+          <div className="safe-empty" role="status">
+            <MapPin size={24} />
+            <strong>Directory unavailable</strong>
+            <p>{loadError}</p>
+          </div>
+        )}
+
+        {!loading && !loadError && filteredPlaces.length === 0 && (
+          <div className="safe-empty" role="status">
+            <MapPin size={24} />
+            <strong>No places found</strong>
+            <p>Try another search or choose a different category.</p>
+          </div>
+        )}
+
+        <div className="safe-place-cards">
           {filteredPlaces.map((place) => {
-            const position = getMarkerPosition(place);
-            const selected = selectedPlace?.id === place.id;
+            const distance = getDistanceKm(userLocation, place.coordinates);
+            const PlaceIcon =
+              place.category === "hospital" ? Hospital : Building2;
 
             return (
-              <button
+              <article
+                className={`safe-place-card ${
+                  selectedId === place.id ? "selected" : ""
+                }`}
                 key={place.id}
-                type="button"
-                title={place.name}
-                onClick={() => setSelectedPlace(place)}
-                style={{
-                  position: "absolute",
-                  top: position.top,
-                  left: position.left,
-                  transform: "translate(-50%, -50%)",
-                  width: selected ? "46px" : "38px",
-                  height: selected ? "46px" : "38px",
-                  borderRadius: "50%",
-                  border: selected
-                    ? "4px solid #1e3a8a"
-                    : "3px solid #ffffff",
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-                }}
+                onClick={() => setSelectedId(place.id)}
               >
-                📍
-              </button>
+                <div
+                  className={`safe-place-type safe-place-type-${place.category}`}
+                >
+                  <PlaceIcon size={21} aria-hidden="true" />
+                </div>
+                <div className="safe-place-info">
+                  <span className="safe-place-category">
+                    {place.category}
+                  </span>
+                  <h3>{place.name}</h3>
+                  {place.address && <p>{place.address}</p>}
+                  {distance !== null && (
+                    <small>{distance.toFixed(1)} km away</small>
+                  )}
+                </div>
+                <a
+                  className="safe-directions"
+                  href={getDirectionsUrl(place)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Navigate to ${place.name}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Navigation size={17} />
+                  <span>Go</span>
+                </a>
+              </article>
             );
           })}
         </div>
-
-        {selectedPlace && (
-          <div
-            style={{
-              marginTop: "15px",
-              padding: "16px",
-              borderRadius: "10px",
-              backgroundColor: "#eff6ff",
-            }}
-          >
-            <strong>{selectedPlace.name}</strong>
-
-            <p style={{ margin: "6px 0" }}>
-              {selectedPlace.address}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => navigateToPlace(selectedPlace)}
-              style={{
-                padding: "9px 14px",
-                border: "none",
-                borderRadius: "7px",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                cursor: "pointer",
-                fontWeight: "600",
-              }}
-            >
-              Navigate
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+      </section>
+      <div className="safe-directory-bottom-space" />
+    </main>
   );
-};
-
-export default SafePlaces;
+}

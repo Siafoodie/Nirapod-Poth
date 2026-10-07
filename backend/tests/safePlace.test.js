@@ -1,28 +1,33 @@
-import { describe, test, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest';
 import request from 'supertest';
 import app from '../src/app.js';
+import SafePlace from '../src/models/SafePlace.js';
 
-vi.mock('../src/models/SafePlace.js', () => ({
-  default: {
-    find: vi.fn().mockReturnValue({
-      sort: vi.fn().mockResolvedValue([
-        {
-          _id: '60d0fe4f5311236168a109ca',
-          name: 'Test Hospital',
-          category: 'hospital',
-          address: 'Dhaka',
-          coordinates: [90.3900, 23.8100],
-          phone: '01711111111',
-          isOpen247: true
-        }
-      ])
-    }),
-    create: vi.fn().mockImplementation((data) => Promise.resolve({
+beforeEach(() => {
+  vi.spyOn(SafePlace, 'find').mockReturnValue({
+    sort: vi.fn().mockResolvedValue([
+      {
+        _id: '60d0fe4f5311236168a109ca',
+        name: 'Test Hospital',
+        category: 'hospital',
+        address: 'Dhaka',
+        coordinates: [90.39, 23.81],
+        phone: '01711111111',
+        isOpen247: true,
+      },
+    ]),
+  });
+  vi.spyOn(SafePlace, 'create').mockImplementation((data) =>
+    Promise.resolve({
       _id: '60d0fe4f5311236168a109cb',
-      ...data
-    }))
-  }
-}));
+      ...data,
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('US-10: Safe Places API, Caching & Category Filter Tests', () => {
   
@@ -30,6 +35,7 @@ describe('US-10: Safe Places API, Caching & Category Filter Tests', () => {
     const res = await request(app).get('/api/safe-places?category=hospital');
     expect(res.statusCode).toEqual(200);
     expect(res.body).toHaveProperty('success', true);
+    expect(SafePlace.find).toHaveBeenCalledWith({ category: 'hospital' });
   }, 15000); // Increased timeout to 15s
 
   test('POST /api/safe-places should create a new safe place and invalidate cache', async () => {
@@ -48,5 +54,6 @@ describe('US-10: Safe Places API, Caching & Category Filter Tests', () => {
       
     expect(res.statusCode).toEqual(201);
     expect(res.body).toHaveProperty('success', true);
+    expect(SafePlace.create).toHaveBeenCalledWith(testPlace);
   }, 15000); // Increased timeout to 15s
 }); 
