@@ -5,14 +5,26 @@ import { api } from "../api";
 
 export default function TrustedContacts() {
   const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   // Load contacts
   const loadContacts = async () => {
     try {
-      const data = await api("/contacts");
+      setLoadError("");
+      const response = await api("/contacts");
+      const data = Array.isArray(response)
+        ? response
+        : response.contacts || response.data;
+      if (!Array.isArray(data)) {
+        throw new Error("The contacts API returned an invalid response.");
+      }
       setContacts(data);
     } catch (error) {
       console.error("Failed to load contacts:", error);
+      setLoadError(error.message || "Failed to load contacts.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,6 +149,17 @@ export default function TrustedContacts() {
       }
     >
       <div className="contacts">
+        {loading && <p role="status">Loading trusted contacts...</p>}
+        {!loading && loadError && (
+          <p className="profile-error-message" role="alert">
+            {loadError}
+          </p>
+        )}
+        {!loading && !loadError && contacts.length === 0 && (
+          <p className="muted">
+            No trusted contacts yet. Add one to get started.
+          </p>
+        )}
         {contacts.map((contact) => (
           <div
             className="contact"

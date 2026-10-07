@@ -726,6 +726,13 @@ textarea:focus-visible {
   border: 20px solid #ffeded;
   outline: 1px solid #f0b8bd;
   box-shadow: 0 12px 30px rgba(217, 56, 72, .2);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.app-layout .sos:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .app-layout .sos-actions button {

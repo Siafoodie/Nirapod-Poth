@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import request from "supertest";
 import Report from "../src/models/Report.js";
 import app from "../src/app.js";
 
-describe("Report voting API", () => {
+describe("T-09.1: Report voting API", () => {
   let server;
   let baseUrl;
 
@@ -74,6 +75,48 @@ describe("Report voting API", () => {
 
     expect(response.status).toBe(400);
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("T-08.3: Anonymous report privacy", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("does not persist or return personal information with a report", async () => {
+    const createReport = vi.spyOn(Report, "create").mockResolvedValue({
+      _id: "507f1f77bcf86cd799439011",
+      incidentType: "harassment",
+      location: "Mirpur, Dhaka",
+      description: "Incident reported nearby",
+      status: "pending",
+      upvotes: 0,
+      downvotes: 0,
+      votes: [],
+    });
+
+    const response = await request(app)
+      .post("/api/reports")
+      .send({
+        incidentType: "harassment",
+        location: "Mirpur, Dhaka",
+        description: "Incident reported nearby",
+        name: "Reporter Name",
+        email: "reporter@example.com",
+        phone: "01700000000",
+        userId: "private-user-id",
+      });
+
+    expect(response.status).toBe(201);
+    expect(createReport).toHaveBeenCalledWith({
+      incidentType: "harassment",
+      location: "Mirpur, Dhaka",
+      description: "Incident reported nearby",
+    });
+    expect(response.body.data).not.toHaveProperty("name");
+    expect(response.body.data).not.toHaveProperty("email");
+    expect(response.body.data).not.toHaveProperty("phone");
+    expect(response.body.data).not.toHaveProperty("userId");
   });
 });
 
