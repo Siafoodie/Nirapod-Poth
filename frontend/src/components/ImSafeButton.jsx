@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import useGeolocation from "../hooks/useGeolocation"; 
-import { api } from "../api";                        
+import useGeolocation from "../hooks/useGeolocation";
+import { api } from "../api";
+import { useLanguage } from "../context/LanguageContext";   // ← শুধু এই লাইন যোগ
 
 const ImSafeButton = () => {
   // ===== ORIGINAL STATE (edited) =====
@@ -15,6 +16,9 @@ const ImSafeButton = () => {
 
   // ===== GEOLOCATION HOOK (added) =====
   const { error, loading, getCurrentPosition, getMapsLink } = useGeolocation();
+
+  // ===== LANGUAGE HOOK (added) =====
+  const { t } = useLanguage();
 
   // ===== LOAD TRUSTED CONTACTS (added) =====
   useEffect(() => {
@@ -39,7 +43,7 @@ const ImSafeButton = () => {
   // ===== FULL SEND LOGIC (added) =====
   const handleSendCheckIn = async () => {
     if (selectedContacts.length === 0) {
-      setStatus("Please select at least one trusted contact.");
+      setStatus(t("selectAtLeastOne"));
       return;
     }
 
@@ -95,7 +99,7 @@ const ImSafeButton = () => {
         disabled={sending || loading}
         className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-60"
       >
-        {sending || loading ? "Getting location..." : "I'm Safe"}
+        {sending || loading ? t("loading") : t("imSafe")}
       </button>
 
       {/* ===== NEW UI (added below original button) ===== */}
@@ -105,12 +109,12 @@ const ImSafeButton = () => {
           checked={includeLocation}
           onChange={(e) => setIncludeLocation(e.target.checked)}
         />
-        Include current location
+        {t("includeLocation")}
       </label>
 
       {contacts.length > 0 && (
         <div className="mt-4 w-full max-w-xs">
-          <p className="text-sm font-medium mb-2">Send to:</p>
+          <p className="text-sm font-medium mb-2">{t("sendTo")}:</p>
           {contacts.map((c) => (
             <label key={c._id} className="flex items-center gap-2 mb-1">
               <input
@@ -144,18 +148,18 @@ const ImSafeButton = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/40">
           <div className="bg-white p-6 rounded-xl shadow-lg text-center w-80">
             <h2 className="text-xl font-bold mb-2">
-              Safety Check-In
+              {t("safetyCheckIn")}
             </h2>
 
             <p className="text-gray-600 mb-4">
-              Your safety status has been confirmed.
+              {t("checkInConfirmed")}
             </p>
 
             <button
               onClick={() => setShowPopup(false)}
               className="bg-green-600 text-white px-4 py-2 rounded-lg"
             >
-              Close
+              {t("close")}
             </button>
           </div>
         </div>

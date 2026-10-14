@@ -3,6 +3,7 @@ import Layout from "../components/Layout";
 import { Button } from "../components/UI";
 import { api } from "../api";
 import useGeolocation from "../hooks/useGeolocation";
+import { useLanguage } from "../context/LanguageContext";    
 
 export default function ImSafe() {
   const [contacts, setContacts] = useState([]);
@@ -18,11 +19,15 @@ export default function ImSafe() {
     getMapsLink,
   } = useGeolocation();
 
+  const { t } = useLanguage();   
 
+  // ==========================================
   // Load Trusted Contacts
+  // ==========================================
   useEffect(() => {
-    api("/contacts")
-      .then((data) => {
+    const loadContacts = async () => {
+      try {
+        const data = await api("/contacts");
 
         const list = Array.isArray(data)
           ? data
@@ -30,230 +35,198 @@ export default function ImSafe() {
 
         setContacts(list);
 
+        // Select first two contacts by default
         setSelected(
           list
             .slice(0, 2)
             .map((contact) => contact._id)
         );
-
-      })
-      .catch(() => {
-
+      } catch (error) {
         setContacts([]);
 
         setStatus(
-          "Failed to load trusted contacts."
+          t("failedLoadContacts") || "Failed to load trusted contacts."
         );
 
         setStatusType("error");
+      }
+    };
 
-      });
-
+    loadContacts();
   }, []);
 
-
-
+  // ==========================================
   // Select / Unselect Contact
+  // ==========================================
   const toggleContact = (id) => {
-
     setSelected((current) =>
-
       current.includes(id)
-
         ? current.filter(
             (item) => item !== id
           )
-
         : [...current, id]
-
     );
 
+    setStatus("");
+    setStatusType("");
   };
 
-
-
-  // Send Check-In
+  // ==========================================
+  // Send I'm Safe
+  // ==========================================
   const send = async () => {
+    setStatus("");
+    setStatusType("");
 
-
-    if (selected.length === 0) {
-
+    // No trusted contacts
+    if (contacts.length === 0) {
       setStatus(
-        "Please select at least one trusted contact."
+        t("noContactsFound") || "No trusted contacts found. Please add a trusted contact first."
       );
 
       setStatusType("error");
-
       return;
     }
 
+    // No selected contacts
+    if (selected.length === 0) {
+      setStatus(
+        t("selectAtLeastOne")
+      );
+
+      setStatusType("error");
+      return;
+    }
 
     setSending(true);
 
-    setStatus("");
-
-    setStatusType("");
-
-
-
     try {
+      // ======================================
+      // Prepare Message
+      // ======================================
 
       let message = "I'm safe.";
 
-
-
-      // Try getting location
       if (includeLocation) {
-
         try {
-
           const coords =
             await getCurrentPosition();
-
 
           const mapsLink =
             getMapsLink(coords);
 
-
           message =
             `I'm safe. My current location: ${mapsLink}`;
-
-
         } catch (error) {
-
           console.warn(
             "Location unavailable. Sending without location."
           );
 
-          // Continue without location
-
           message = "I'm safe.";
-
         }
-
       }
 
-
+      // ======================================
+      // Get Selected Trusted Contacts
+      // ======================================
 
       const selectedContacts =
-        contacts.filter(
-          (contact) =>
-            selected.includes(contact._id)
+        contacts.filter((contact) =>
+          selected.includes(contact._id)
         );
 
+      // Get phone numbers
+      const phoneNumbers =
+        selectedContacts
+          .map((contact) => contact.phone)
+          .filter(Boolean);
+
+      if (phoneNumbers.length === 0) {
+        setStatus(
+          t("noValidPhone") || "Selected contacts do not have valid phone numbers."
+        );
+
+        setStatusType("error");
+        return;
+      }
+
+      // ======================================
+      // Prepare SMS Link
+      // ======================================
+
+      const numbers =
+        phoneNumbers.join(",");
+
+      const encodedMessage =
+        encodeURIComponent(message);
+
+      /*
+        Mobile browsers normally hand this URL
+        to the phone's SMS application.
+
+        Example:
+        sms:017XXXXXXXX,018XXXXXXXX?body=I'm%20safe
+      */
+
+      const smsUrl =
+        `sms:${numbers}?body=${encodedMessage}`;
+
+      // ======================================
+      // Show Confirmation
+      // ======================================
 
       const names =
         selectedContacts
-          .map(
-            (contact) =>
-              contact.name
-          )
+          .map((contact) => contact.name)
           .join(", ");
 
-
-
-      // Backend Check-In API
-
-      try {
-
-        await api("/checkin", {
-
-          method: "POST",
-
-          body: JSON.stringify({
-
-            contactIds: selected,
-
-            includeLocation,
-
-          }),
-
-        });
-
-
-      } catch (backendError) {
-
-        console.warn(
-          "Backend check-in failed:",
-          backendError
-        );
-
-      }
-
-
-
-      // Success Message
-
-      // Success Message
-setStatus(
-  `Check-in prepared successfully for: ${names}`
-);
-
-setStatusType("success");
-
-// Open SMS after short delay
-setStatus(
-  `Message ready:\n${message}`
-);
-
-setStatusType("success");
-
-
-    } catch (err) {
-
-
       setStatus(
-        err.message ||
-        "Unable to prepare check-in. Please try again."
+        `${t("openingSms") || "Opening SMS for"}: ${names}`
       );
 
+      setStatusType("success");
+
+      // ======================================
+      // Open SMS Application
+      // ======================================
+
+      window.location.href = smsUrl;
+
+    } catch (err) {
+      setStatus(
+        err.message ||
+          t("unableCheckIn") || "Unable to prepare check-in. Please try again."
+      );
 
       setStatusType("error");
-
-
     } finally {
-
       setSending(false);
-
     }
-
   };
 
-
-
   return (
+    <Layout title={t("imSafe")} back>
 
-    <Layout title="I'm Safe" back>
-
-
+      {/* Check Icon */}
       <div className="safecheck">
         ✓
       </div>
 
-
-
+      {/* Heading */}
       <div className="center">
-
         <h2>
-          Safety Check-In
+          {t("safetyCheckIn")}
         </h2>
 
         <p>
-          Send "I'm Safe" message to:
+          {t("sendImSafeMessage") || `Send "I'm Safe" message to:`}
         </p>
-
       </div>
 
-
-
-
+      {/* Trusted Contacts */}
       <div className="stack">
 
-
-        {
-          contacts.length > 0
-
-          ?
+        {contacts.length > 0 ? (
 
           contacts.map((contact) => (
 
@@ -262,26 +235,19 @@ setStatusType("success");
               key={contact._id}
             >
 
-
               <input
-
                 type="checkbox"
-
                 checked={
                   selected.includes(
                     contact._id
                   )
                 }
-
-
                 onChange={() =>
                   toggleContact(
                     contact._id
                   )
                 }
-
               />
-
 
               <span>
 
@@ -289,140 +255,84 @@ setStatusType("success");
                   {contact.name}
                 </b>
 
-
                 <small>
                   {contact.phone}
                 </small>
 
-
               </span>
-
 
             </label>
 
-
           ))
 
-
-          :
+        ) : (
 
           <p className="muted">
-            Add trusted contacts from Profile first.
+            {t("noContactsFound") || "No trusted contacts found. Add trusted contacts from your profile first."}
           </p>
 
-        }
-
+        )}
 
       </div>
 
-
-
-
+      {/* Location Toggle */}
       <div className="toggleline">
 
-
         <h2>
-
-          Include current
-
-          <br />
-
-          location
-
+          {t("includeLocation")}
         </h2>
 
-
-
         <input
-
           type="checkbox"
-
           checked={includeLocation}
-
-          onChange={(event) =>
+          onChange={(event) => {
             setIncludeLocation(
               event.target.checked
-            )
-          }
+            );
 
+            setStatus("");
+            setStatusType("");
+          }}
         />
-
 
       </div>
 
+      {/* Status Message */}
+      {status && (
 
-
-
-
-      {
-        status && (
-
-          <div
-
-            className={
-              statusType === "success"
-
+        <div
+          className={
+            statusType === "success"
               ? "success-message"
-
               : "error"
-            }
+          }
+          role="alert"
+        >
 
-          >
+          {status}
 
-            {status}
+        </div>
 
-          </div>
+      )}
 
-        )
-      }
-
-
-
-
-
+      {/* Send Button */}
       <Button
-
         className="greenbtn"
-
         onClick={send}
-
         disabled={
           sending ||
           contacts.length === 0
         }
-
       >
 
-
-        {
-
-          sending
-
-          ?
-
-          "Preparing..."
-
-          :
-
-          statusType === "error"
-
-          ?
-
-          "Retry Check-In"
-
-          :
-
-          "Send Check-In"
-
-        }
-
+        {sending
+          ? t("loading")
+          : statusType === "error"
+          ? t("retryCheckIn") || "Retry Check-In"
+          : t("sendImSafe")}
 
       </Button>
 
-
-
     </Layout>
-
   );
-
-}
+}  
