@@ -46,7 +46,9 @@ Expected Result:
 The user's name, email, phone number, or other personal information
 should not be displayed or included in the report.
 
-Status: Pending
+Automated coverage: `backend/tests/report.test.js` verifies that personal
+information in the request is neither persisted nor returned by the API.
+Manual full-flow verification: Pending
 
 
 ### Test Case 4: Normal Report Submission

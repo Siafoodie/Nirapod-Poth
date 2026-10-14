@@ -97,10 +97,13 @@ export default function Emergency() {
       </div>
 
       {/* Instant click SOS button */}
-      <div
+      <button
+        type="button"
         className={`sos ${active ? "activated" : ""}`}
         onClick={activateSOS}
-        style={{ cursor: "pointer" }}
+        disabled={active}
+        aria-label={active ? "SOS activated" : "Send emergency SOS now"}
+        style={{ cursor: active ? "default" : "pointer" }}
       >
         <b>{active ? "✓" : "SOS"}</b>
         <span>
@@ -108,7 +111,7 @@ export default function Emergency() {
             ? t("sosActivated") || "ACTIVATED"
             : t("sendEmergencySms") || "TAP TO SEND SOS"}
         </span>
-      </div>
+      </button>
 
       {(active || status) && (
         <div className={`sos-status ${active ? "success" : ""}`}>
@@ -201,4 +204,4 @@ export default function Emergency() {
       </p>
     </Layout>
   );
-} 
+}
