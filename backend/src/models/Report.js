@@ -30,31 +30,41 @@ const reportSchema = new mongoose.Schema(
       trim: true,
     },
 
-    description: {
-      type: String,
-      required: true,
-      trim: true,
+   description: {
+    type: String,
+    required: false,
+    default: "",
+    trim: true,
     },
-
     geo: {
+  type: new mongoose.Schema(
+    {
       type: {
         type: String,
         enum: ["Point"],
-        default: "Point",
+        required: true,
       },
       coordinates: {
         type: [Number],
+        required: true,
         validate: {
           validator: (coordinates) =>
+            Array.isArray(coordinates) &&
             coordinates.length === 2 &&
             coordinates[0] >= -180 &&
             coordinates[0] <= 180 &&
             coordinates[1] >= -90 &&
             coordinates[1] <= 90,
-          message: "Coordinates must be [longitude, latitude] within valid ranges",
+          message:
+            "Coordinates must be [longitude, latitude] within valid ranges",
         },
       },
     },
+    { _id: false }
+  ),
+  default: undefined,
+},
+    
 
     votes: {
       type: [voteSchema],
