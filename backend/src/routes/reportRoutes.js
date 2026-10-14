@@ -1,7 +1,8 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const Report = require('../models/Report');
-const voteRateLimiter = require('../middleware/voteRateLimiter');
+
+const express = require("express");
+const mongoose = require("mongoose");
+const Report = require("../models/Report");
+const voteRateLimiter = require("../middleware/voteRateLimiter");
 
 const router = express.Router();
 
@@ -9,43 +10,62 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 const MAX_VOTING_DISTANCE_KM = 5;
 
-
 // ======================================================
-// Convert Report to API Response
+// Convert Report to Safe API Response
 // ======================================================
 
 const toReportResponse = (report, voterId) => {
   const data = report.toObject ? report.toObject() : report;
 
-  const { votes = [], ...reportData } = data;
+  const votes = Array.isArray(data.votes) ? data.votes : [];
 
   const upvotes =
     (data.upvotes || 0) +
-    votes.filter((vote) => vote.value === 'upvote').length;
+    votes.filter((vote) => vote.value === "upvote").length;
 
   const downvotes =
     (data.downvotes || 0) +
-    votes.filter((vote) => vote.value === 'downvote').length;
+    votes.filter((vote) => vote.value === "downvote").length;
 
-  return {
-    ...reportData,
-
+  // Explicitly return only public fields.
+  // Never expose votes, voterId, or future private fields.
+  const response = {
+    _id: data._id,
+    incidentType: data.incidentType,
+    location: data.location,
+    description: data.description,
+    status: data.status,
     upvotes,
     downvotes,
-
     score: upvotes - downvotes,
-
-    ...(voterId
-      ? {
-          userVote:
-            votes.find(
-              (vote) => vote.voterId === voterId
-            )?.value || null,
-        }
-      : {}),
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
   };
-};
 
+  // Include location only when valid coordinates exist.
+  if (
+    data.geo &&
+    data.geo.type === "Point" &&
+    Array.isArray(data.geo.coordinates) &&
+    data.geo.coordinates.length === 2
+  ) {
+    response.geo = {
+      type: "Point",
+      coordinates: [
+        data.geo.coordinates[0],
+        data.geo.coordinates[1],
+      ],
+    };
+  }
+
+  // Only return the requesting voter's own vote.
+  if (voterId) {
+    response.userVote =
+      votes.find((vote) => vote.voterId === voterId)?.value || null;
+  }
+
+  return response;
+};
 
 // ======================================================
 // Parse Limit
@@ -63,7 +83,6 @@ const parseLimit = (value) => {
     : null;
 };
 
-
 // ======================================================
 // Validate Coordinates
 // ======================================================
@@ -76,7 +95,6 @@ const isValidCoordinates = (latitude, longitude) =>
   longitude >= -180 &&
   longitude <= 180;
 
-
 // ======================================================
 // Calculate Distance Between Two Coordinates
 // Haversine Formula
@@ -88,8 +106,7 @@ const calculateDistanceKm = (
   latitude2,
   longitude2
 ) => {
-  const toRadians = (degrees) =>
-    (degrees * Math.PI) / 180;
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
 
   const earthRadiusKm = 6371;
 
@@ -117,12 +134,11 @@ const calculateDistanceKm = (
   return earthRadiusKm * c;
 };
 
-
 // ======================================================
 // GET Nearby Reports
 // ======================================================
 
-router.get('/nearby', async (req, res) => {
+router.get("/nearby", async (req, res) => {
   try {
     const latitude = Number(req.query.latitude);
     const longitude = Number(req.query.longitude);
@@ -135,6 +151,10 @@ router.get('/nearby', async (req, res) => {
     const limit = parseLimit(req.query.limit);
 
     if (
+      req.query.latitude == null ||
+      req.query.longitude == null ||
+      req.query.latitude === "" ||
+      req.query.longitude === "" ||
       !isValidCoordinates(latitude, longitude) ||
       !Number.isFinite(radiusKm) ||
       radiusKm <= 0 ||
@@ -144,7 +164,7 @@ router.get('/nearby', async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          'Valid latitude, longitude, radiusKm (greater than 0 and at most 100), and limit are required',
+          "Valid latitude, longitude, radiusKm (greater than 0 and at most 100), and limit are required",
       });
     }
 
@@ -152,13 +172,9 @@ router.get('/nearby', async (req, res) => {
       geo: {
         $near: {
           $geometry: {
-            type: 'Point',
-            coordinates: [
-              longitude,
-              latitude,
-            ],
+            type: "Point",
+            coordinates: [longitude, latitude],
           },
-
           $maxDistance: radiusKm * 1000,
         },
       },
@@ -166,35 +182,27 @@ router.get('/nearby', async (req, res) => {
 
     return res.status(200).json({
       success: true,
-
       data: reports.map((report) =>
         toReportResponse(report)
       ),
     });
   } catch (error) {
-    console.error(
-      'Nearby reports error:',
-      error
-    );
+    console.error("Nearby reports error:", error);
 
     return res.status(500).json({
       success: false,
-      message: 'Failed to load nearby reports',
-      error: error.message,
+      message: "Failed to load nearby reports",
     });
   }
 });
-
 
 // ======================================================
 // GET All Reports
 // ======================================================
 
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const limit = parseLimit(
-      req.query.limit
-    );
+    const limit = parseLimit(req.query.limit);
 
     if (limit === null) {
       return res.status(400).json({
@@ -205,48 +213,39 @@ router.get('/', async (req, res) => {
     }
 
     const reports = await Report.find()
-      .sort({
-        createdAt: -1,
-      })
+      .sort({ createdAt: -1 })
       .limit(limit);
 
     return res.status(200).json({
       success: true,
-
       data: reports.map((report) =>
         toReportResponse(report)
       ),
     });
   } catch (error) {
-    console.error(
-      'Get reports error:',
-      error
-    );
+    console.error("Get reports error:", error);
 
     return res.status(500).json({
       success: false,
-      message: 'Failed to load reports',
-      error: error.message,
+      message: "Failed to load reports",
     });
   }
 });
 
-
 // ======================================================
-// CREATE Report
+// CREATE Anonymous Report
 // ======================================================
 
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     if (
       !req.body ||
-      typeof req.body !== 'object' ||
+      typeof req.body !== "object" ||
       Array.isArray(req.body)
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          'A JSON request body is required',
+        message: "A JSON request body is required",
       });
     }
 
@@ -258,20 +257,32 @@ router.post('/', async (req, res) => {
       longitude,
     } = req.body;
 
+    if (
+      typeof incidentType !== "string" ||
+      !incidentType.trim() ||
+      typeof location !== "string" ||
+      !location.trim() ||
+      (description !== undefined &&
+        typeof description !== "string")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Incident type and location are required; description must be text",
+      });
+    }
+
     const hasLatitude =
-      latitude !== undefined &&
-      latitude !== null;
+      latitude !== undefined && latitude !== null;
 
     const hasLongitude =
-      longitude !== undefined &&
-      longitude !== null;
+      longitude !== undefined && longitude !== null;
 
-    // Latitude and longitude must be provided together
     if (hasLatitude !== hasLongitude) {
       return res.status(400).json({
         success: false,
         message:
-          'latitude and longitude must be provided together',
+          "latitude and longitude must be provided together",
       });
     }
 
@@ -283,6 +294,8 @@ router.post('/', async (req, res) => {
       parsedLongitude = Number(longitude);
 
       if (
+        latitude === "" ||
+        longitude === "" ||
         !isValidCoordinates(
           parsedLatitude,
           parsedLongitude
@@ -291,54 +304,48 @@ router.post('/', async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            'latitude and longitude must be valid geographic coordinates',
+            "latitude and longitude must be valid geographic coordinates",
         });
       }
     }
 
-    const report = await Report.create({
-      incidentType,
-      location,
-      description,
+    // Only approved report fields are saved.
+    // No reporter name, email, userId, or createdBy.
+    const reportData = {
+      incidentType: incidentType.trim(),
+      location: location.trim(),
+      description: (description || "").trim(),
+    };
 
-      ...(hasLatitude
-        ? {
-            geo: {
-              type: 'Point',
+    if (hasLatitude) {
+      reportData.geo = {
+        type: "Point",
+        coordinates: [
+          parsedLongitude,
+          parsedLatitude,
+        ],
+      };
+    }
 
-              coordinates: [
-                parsedLongitude,
-                parsedLatitude,
-              ],
-            },
-          }
-        : {}),
-    });
+    const report = await Report.create(reportData);
 
     return res.status(201).json({
       success: true,
-      message:
-        'Report submitted successfully!',
+      message: "Report submitted successfully!",
       data: toReportResponse(report),
     });
   } catch (error) {
-    console.error(
-      'Create report error:',
-      error
-    );
+    console.error("Create report error:", error);
 
     return res.status(500).json({
       success: false,
-      message: 'Failed to submit report',
-      error: error.message,
+      message: "Failed to submit report",
     });
   }
 });
 
-
 // ======================================================
 // VOTE ON REPORT
-// Official voting endpoint
 //
 // Features:
 // - One vote per voter per report
@@ -349,36 +356,29 @@ router.post('/', async (req, res) => {
 // ======================================================
 
 router.post(
-  '/:reportId/vote',
+  "/:reportId/vote",
   voteRateLimiter,
   async (req, res) => {
     try {
       const { reportId } = req.params;
 
-      // ------------------------------------------
       // Validate Report ID
-      // ------------------------------------------
-
       if (!mongoose.isValidObjectId(reportId)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid report ID',
+          message: "Invalid report ID",
         });
       }
 
-      // ------------------------------------------
       // Validate Request Body
-      // ------------------------------------------
-
       if (
         !req.body ||
-        typeof req.body !== 'object' ||
+        typeof req.body !== "object" ||
         Array.isArray(req.body)
       ) {
         return res.status(400).json({
           success: false,
-          message:
-            'A JSON request body is required',
+          message: "A JSON request body is required",
         });
       }
 
@@ -389,29 +389,23 @@ router.post(
         longitude,
       } = req.body;
 
-      // ------------------------------------------
       // Validate Voter ID
-      // ------------------------------------------
-
       if (
-        typeof voterId !== 'string' ||
+        typeof voterId !== "string" ||
         voterId.trim().length === 0 ||
         voterId.trim().length > 128
       ) {
         return res.status(400).json({
           success: false,
           message:
-            'voterId must be a non-empty string of at most 128 characters',
+            "voterId must be a non-empty string of at most 128 characters",
         });
       }
 
-      // ------------------------------------------
       // Validate Vote
-      // ------------------------------------------
-
       if (
-        vote !== 'upvote' &&
-        vote !== 'downvote'
+        vote !== "upvote" &&
+        vote !== "downvote"
       ) {
         return res.status(400).json({
           success: false,
@@ -420,17 +414,17 @@ router.post(
         });
       }
 
-      // ------------------------------------------
       // Validate User Location
-      // ------------------------------------------
-
-      const userLatitude =
-        Number(latitude);
-
-      const userLongitude =
-        Number(longitude);
+      const userLatitude = Number(latitude);
+      const userLongitude = Number(longitude);
 
       if (
+        latitude === undefined ||
+        latitude === null ||
+        latitude === "" ||
+        longitude === undefined ||
+        longitude === null ||
+        longitude === "" ||
         !isValidCoordinates(
           userLatitude,
           userLongitude
@@ -439,28 +433,22 @@ router.post(
         return res.status(400).json({
           success: false,
           message:
-            'Valid latitude and longitude are required to vote',
+            "Valid latitude and longitude are required to vote",
         });
       }
 
-      // ------------------------------------------
       // Find Report
-      // ------------------------------------------
-
       const existingReport =
         await Report.findById(reportId);
 
       if (!existingReport) {
         return res.status(404).json({
           success: false,
-          message: 'Report not found',
+          message: "Report not found",
         });
       }
 
-      // ------------------------------------------
       // Validate Report Location
-      // ------------------------------------------
-
       const reportCoordinates =
         existingReport.geo?.coordinates;
 
@@ -471,7 +459,7 @@ router.post(
         return res.status(400).json({
           success: false,
           message:
-            'This report does not have valid location information',
+            "This report does not have valid location information",
         });
       }
 
@@ -490,192 +478,138 @@ router.post(
         return res.status(400).json({
           success: false,
           message:
-            'This report does not have valid location information',
+            "This report does not have valid location information",
         });
       }
 
-      // ------------------------------------------
       // Calculate Distance
-      // ------------------------------------------
+      const distanceKm = calculateDistanceKm(
+        userLatitude,
+        userLongitude,
+        reportLatitude,
+        reportLongitude
+      );
 
-      const distanceKm =
-        calculateDistanceKm(
-          userLatitude,
-          userLongitude,
-          reportLatitude,
-          reportLongitude
-        );
-
-      // ------------------------------------------
       // Proximity Restriction
-      // ------------------------------------------
-
-      if (
-        distanceKm >
-        MAX_VOTING_DISTANCE_KM
-      ) {
+      if (distanceKm > MAX_VOTING_DISTANCE_KM) {
         return res.status(403).json({
           success: false,
           message:
-            'You can only vote on reports within 5 km of your location.',
+            "You can only vote on reports within 5 km of your location.",
         });
       }
 
-      // ------------------------------------------
       // Add / Change Vote
-      // ------------------------------------------
+      const normalizedVoterId = voterId.trim();
 
-      const normalizedVoterId =
-        voterId.trim();
-
-      const report =
-        await Report.findByIdAndUpdate(
-          reportId,
-
-          [
-            {
-              $set: {
-                votes: {
-                  $concatArrays: [
-                    // Remove this user's old vote
-                    {
-                      $filter: {
-                        input: {
-                          $ifNull: [
-                            '$votes',
-                            [],
-                          ],
-                        },
-
-                        as: 'existingVote',
-
-                        cond: {
-                          $ne: [
-                            '$$existingVote.voterId',
-                            normalizedVoterId,
-                          ],
-                        },
+      const report = await Report.findByIdAndUpdate(
+        reportId,
+        [
+          {
+            $set: {
+              votes: {
+                $concatArrays: [
+                  // Remove this user's old vote
+                  {
+                    $filter: {
+                      input: {
+                        $ifNull: ["$votes", []],
+                      },
+                      as: "existingVote",
+                      cond: {
+                        $ne: [
+                          "$$existingVote.voterId",
+                          normalizedVoterId,
+                        ],
                       },
                     },
+                  },
 
-                    // Add user's new vote
-                    [
-                      {
-                        voterId:
-                          normalizedVoterId,
-
-                        value: vote,
-                      },
-                    ],
+                  // Add user's new vote
+                  [
+                    {
+                      voterId: normalizedVoterId,
+                      value: vote,
+                    },
                   ],
-                },
+                ],
               },
             },
-          ],
-
-          {
-            new: true,
-            updatePipeline: true,
-          }
-        );
+          },
+        ],
+        {
+          new: true,
+          updatePipeline: true,
+        }
+      );
 
       if (!report) {
         return res.status(404).json({
           success: false,
-          message: 'Report not found',
+          message: "Report not found",
         });
       }
 
-      // ------------------------------------------
       // Success
-      // ------------------------------------------
-
       return res.status(200).json({
         success: true,
-        message:
-          'Vote submitted successfully.',
-
+        message: "Vote submitted successfully.",
         data: toReportResponse(
           report,
           normalizedVoterId
         ),
       });
     } catch (error) {
-      console.error(
-        'Vote error:',
-        error
-      );
+      console.error("Vote error:", error);
 
       return res.status(500).json({
         success: false,
-        message:
-          'Failed to submit vote',
-        error: error.message,
+        message: "Failed to submit vote",
       });
     }
   }
 );
-
 
 // ======================================================
 // GET Vote Score
 // ======================================================
 
-router.get(
-  '/:id/score',
-  async (req, res) => {
-    try {
-      if (
-        !mongoose.isValidObjectId(
-          req.params.id
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Invalid report ID',
-        });
-      }
-
-      const report =
-        await Report.findById(
-          req.params.id
-        ).select(
-          'upvotes downvotes votes'
-        );
-
-      if (!report) {
-        return res.status(404).json({
-          success: false,
-          message:
-            'Report not found',
-        });
-      }
-
-      const score =
-        toReportResponse(report);
-
-      return res.status(200).json({
-        success: true,
-        upvotes: score.upvotes,
-        downvotes: score.downvotes,
-        score: score.score,
-      });
-    } catch (error) {
-      console.error(
-        'Vote score error:',
-        error
-      );
-
-      return res.status(500).json({
+router.get("/:id/score", async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
         success: false,
-        message:
-          'Failed to get vote score',
-        error: error.message,
+        message: "Invalid report ID",
       });
     }
-  }
-);
 
+    const report = await Report.findById(
+      req.params.id
+    ).select("upvotes downvotes votes");
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found",
+      });
+    }
+
+    const score = toReportResponse(report);
+
+    return res.status(200).json({
+      success: true,
+      upvotes: score.upvotes,
+      downvotes: score.downvotes,
+      score: score.score,
+    });
+  } catch (error) {
+    console.error("Vote score error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get vote score",
+    });
+  }
+});
 
 module.exports = router;

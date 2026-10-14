@@ -2,128 +2,90 @@ import React, { useState } from "react";
 import useGeolocation from "../hooks/useGeolocation";
 import { api } from "../api";
 
-const ReportForm = () => {
-  // ===== ORIGINAL STATE =====
-  const [formData, setFormData] = useState({
-    incidentType: "",
-    location: "",
-    description: "",
-  });
+const initialForm = { incidentType: "", location: "", description: "" };
 
-  // ===== NEW STATES (FOR API, LOADING & IMAGE) =====
+const ReportForm = () => {
+  const [formData, setFormData] = useState(initialForm);
+  const [incidentCoords, setIncidentCoords] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingGps, setLoadingGps] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [image, setImage] = useState(null); // Base64 Image string
-  const [imagePreview, setImagePreview] = useState(null); // Preview URL
-
-  // ===== GEOLOCATION HOOK =====
+  const [imagePreview, setImagePreview] = useState(null);
   const { getCurrentPosition, error: geoError } = useGeolocation();
 
-  // ===== HANDLE CHANGE =====
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Manually editing the location invalidates previously selected GPS coordinates.
+    if (name === "location") setIncidentCoords(null);
   };
 
-  // ===== HANDLE IMAGE UPLOAD =====
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size should be less than 5MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result); // Base64 String
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setStatusMessage("❌ Please select an image file.");
+      e.target.value = "";
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMessage("❌ Image size must be 5MB or less.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.onerror = () => setStatusMessage("❌ Could not read the image.");
+    reader.readAsDataURL(file);
   };
 
-  // Remove uploaded image
-  const handleRemoveImage = () => {
-    setImage(null);
-    setImagePreview(null);
-  };
-
-  // ===== SMART GPS LOCATION (With IP Fallback) =====
   const handleGetLocation = async () => {
     setLoadingGps(true);
     setStatusMessage("");
-
+    setIncidentCoords(null);
     try {
-      // 1. Try Browser / Device Geolocation
       const coords = await getCurrentPosition();
-      if (coords && coords.lat && coords.lng) {
-        setFormData((prev) => ({
-          ...prev,
-          location: `GPS: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
-        }));
-      } else {
-        throw new Error("GPS coordinates empty");
+      const lat = Number(coords?.lat);
+      const lng = Number(coords?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
+          lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        throw new Error("Invalid GPS coordinates");
       }
+      setIncidentCoords({ lat, lng });
+      setFormData((prev) => ({
+        ...prev,
+        location: `GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+      }));
     } catch (err) {
-      console.warn("GPS hook failed, trying IP Geolocation fallback...", err);
-      // 2. Fallback to IP Location for Laptops/Desktops
-      try {
-        const res = await fetch("https://ipapi.co/json/");
-        const data = await res.json();
-        if (data && data.city) {
-          setFormData((prev) => ({
-            ...prev,
-            location: `${data.city}, ${data.region || ""}`,
-          }));
-        } else {
-          alert("Could not detect location automatically. Please enter manually.");
-        }
-      } catch (ipErr) {
-        alert("Location detection failed. Please enter manually.");
-      }
+      // An IP-based location is approximate and must not be sent as exact GPS.
+      setIncidentCoords(null);
+      setStatusMessage("❌ GPS unavailable. Please enter the incident location manually.");
     } finally {
       setLoadingGps(false);
     }
   };
 
-  // ===== UPDATED HANDLE SUBMIT =====
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting || loadingGps) return;
     setSubmitting(true);
     setStatusMessage("");
-
     try {
-      // 1. Fetch real GPS coordinates if needed
-      let coords = null;
-      try {
-        coords = await getCurrentPosition();
-      } catch (err) {
-        console.warn("GPS fetch optional:", err);
-      }
-
-      // 2. Submit form data to Backend API (including Image)
+      // No identity fields and no automatic geolocation request on submit.
+      const payload = {
+        incidentType: formData.incidentType,
+        location: formData.location.trim(),
+        description: formData.description.trim(),
+        latitude: incidentCoords?.lat ?? null,
+        longitude: incidentCoords?.lng ?? null,
+      };
       await api("/reports", {
         method: "POST",
-        body: JSON.stringify({
-          incidentType: formData.incidentType,
-          location: formData.location,
-          description: formData.description,
-          latitude: coords?.lat || null,
-          longitude: coords?.lng || null,
-          image: image || null, // Image payload added
-        }),
+        body: JSON.stringify(payload),
       });
-
       setStatusMessage("✅ Report submitted successfully!");
-      setFormData({
-        incidentType: "",
-        location: "",
-        description: "",
-      });
-      setImage(null);
+      setFormData(initialForm);
+      setIncidentCoords(null);
       setImagePreview(null);
     } catch (err) {
       setStatusMessage(`❌ ${err.message || "Failed to submit report"}`);
@@ -131,27 +93,33 @@ const ReportForm = () => {
       setSubmitting(false);
     }
   };
-
   return (
     <div style={styles.pageContainer}>
       <div style={styles.card}>
         <h2 style={styles.title}>Report an Incident</h2>
-        <p style={styles.subtitle}>Please provide the details of the incident.</p>
+        <p style={styles.subtitle}>
+          Please provide the details of the incident.
+        </p>
 
-        {/* STATUS & ERROR MESSAGES */}
         {statusMessage && (
           <div
             style={{
               ...styles.alertBox,
-              backgroundColor: statusMessage.includes("✅") ? "#e8f5e9" : "#ffebee",
-              color: statusMessage.includes("✅") ? "#2e7d32" : "#c62828",
+              backgroundColor: statusMessage.startsWith("✅")
+                ? "#e8f5e9"
+                : "#ffebee",
+              color: statusMessage.startsWith("✅")
+                ? "#2e7d32"
+                : "#c62828",
             }}
           >
             {statusMessage}
           </div>
         )}
 
-        {geoError && <p style={styles.errorText}>{geoError}</p>}
+        {geoError && (
+          <p style={styles.errorText}>{geoError}</p>
+        )}
 
         <form onSubmit={handleSubmit}>
           {/* INCIDENT TYPE */}
@@ -159,6 +127,7 @@ const ReportForm = () => {
             <label htmlFor="incidentType" style={styles.label}>
               Incident Type
             </label>
+
             <select
               id="incidentType"
               name="incidentType"
@@ -176,11 +145,12 @@ const ReportForm = () => {
             </select>
           </div>
 
-          {/* LOCATION WITH GPS BUTTON */}
+          {/* LOCATION */}
           <div style={styles.fieldGroup}>
             <label htmlFor="location" style={styles.label}>
               Location
             </label>
+
             <div style={styles.locationContainer}>
               <input
                 type="text"
@@ -192,15 +162,18 @@ const ReportForm = () => {
                 required
                 style={styles.locationInput}
               />
+
               <button
                 type="button"
                 onClick={handleGetLocation}
-                disabled={loadingGps}
+                disabled={loadingGps || submitting}
                 style={{
                   ...styles.gpsButton,
-                  backgroundColor: loadingGps ? "#e0d6f2" : "#f2ebf9",
+                  backgroundColor: loadingGps
+                    ? "#e0d6f2"
+                    : "#f2ebf9",
                 }}
-                title="Get current GPS location"
+                title="Use current location as incident location"
               >
                 {loadingGps ? "⌛ Fetching..." : "📍 GPS"}
               </button>
@@ -210,27 +183,38 @@ const ReportForm = () => {
           {/* DESCRIPTION */}
           <div style={styles.fieldGroup}>
             <label htmlFor="description" style={styles.label}>
-              Description
+              Description (Optional)
             </label>
+
             <textarea
               id="description"
               name="description"
-              placeholder="Describe what happened..."
+              placeholder="Describe what happened (optional)..."
               rows="4"
               value={formData.description}
               onChange={handleChange}
-              required
               style={styles.textareaInput}
             />
           </div>
 
-          {/* IMAGE UPLOAD OPTION */}
+          {/* IMAGE PREVIEW */}
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Attach Image (Optional)</label>
+            <label style={styles.label}>
+              Attach Image (Preview Only)
+            </label>
+
             {!imagePreview ? (
               <label style={styles.uploadBox}>
                 <span style={{ fontSize: "20px" }}>📷</span>
-                <span style={{ fontSize: "13px", color: "#6b46c1" }}>Click to upload image</span>
+                <span
+                  style={{
+                    fontSize: "13px",
+                    color: "#6b46c1",
+                  }}
+                >
+                  Click to select image
+                </span>
+
                 <input
                   type="file"
                   accept="image/*"
@@ -240,20 +224,33 @@ const ReportForm = () => {
               </label>
             ) : (
               <div style={styles.previewContainer}>
-                <img src={imagePreview} alt="Incident Preview" style={styles.previewImage} />
+                <img
+                  src={imagePreview}
+                  alt="Incident Preview"
+                  style={styles.previewImage}
+                />
+
                 <button
                   type="button"
-                  onClick={handleRemoveImage}
+                  onClick={() => setImagePreview(null)}
                   style={styles.removeImageBtn}
                 >
                   ✕
                 </button>
               </div>
             )}
+
+            <p style={styles.helperText}>
+              Image attachment is not saved yet.
+            </p>
           </div>
 
-          {/* SUBMIT BUTTON */}
-          <button type="submit" disabled={submitting} style={styles.submitButton}>
+          {/* SUBMIT */}
+          <button
+            type="submit"
+            disabled={submitting || loadingGps}
+            style={styles.submitButton}
+          >
             {submitting ? "Submitting..." : "Submit Report"}
           </button>
         </form>
@@ -262,7 +259,7 @@ const ReportForm = () => {
   );
 };
 
-// Lowkey Lilac Styles
+// STYLES
 const styles = {
   pageContainer: {
     minHeight: "100vh",
@@ -272,8 +269,10 @@ const styles = {
     backgroundColor: "#f7f4fb",
     padding: "20px",
     boxSizing: "border-box",
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
+
   card: {
     backgroundColor: "#ffffff",
     borderRadius: "24px",
@@ -284,17 +283,20 @@ const styles = {
     border: "1px solid #efe8f8",
     boxSizing: "border-box",
   },
+
   title: {
     margin: "0 0 6px 0",
     color: "#2d1a47",
     fontSize: "22px",
     fontWeight: "700",
   },
+
   subtitle: {
     margin: "0 0 20px 0",
     color: "#7e6c9c",
     fontSize: "13px",
   },
+
   alertBox: {
     padding: "10px 14px",
     borderRadius: "12px",
@@ -302,15 +304,18 @@ const styles = {
     fontSize: "13px",
     fontWeight: "600",
   },
+
   errorText: {
     fontSize: "12px",
     color: "#d32f2f",
     marginBottom: "10px",
   },
+
   fieldGroup: {
     marginBottom: "16px",
     textAlign: "left",
   },
+
   label: {
     display: "block",
     marginBottom: "6px",
@@ -318,6 +323,7 @@ const styles = {
     fontWeight: "600",
     color: "#4a2c85",
   },
+
   selectInput: {
     width: "100%",
     padding: "12px 14px",
@@ -329,12 +335,15 @@ const styles = {
     outline: "none",
     boxSizing: "border-box",
   },
+
   locationContainer: {
     display: "flex",
     gap: "8px",
   },
+
   locationInput: {
     flex: 1,
+    minWidth: 0,
     padding: "12px 14px",
     borderRadius: "12px",
     border: "1px solid #e5dcf2",
@@ -344,6 +353,7 @@ const styles = {
     outline: "none",
     boxSizing: "border-box",
   },
+
   gpsButton: {
     padding: "0 14px",
     borderRadius: "12px",
@@ -354,6 +364,7 @@ const styles = {
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
+
   textareaInput: {
     width: "100%",
     padding: "12px 14px",
@@ -366,6 +377,7 @@ const styles = {
     resize: "none",
     boxSizing: "border-box",
   },
+
   uploadBox: {
     display: "flex",
     alignItems: "center",
@@ -377,6 +389,7 @@ const styles = {
     backgroundColor: "#faf8fc",
     cursor: "pointer",
   },
+
   previewContainer: {
     position: "relative",
     width: "100%",
@@ -385,11 +398,13 @@ const styles = {
     overflow: "hidden",
     border: "1px solid #e5dcf2",
   },
+
   previewImage: {
     width: "100%",
     height: "160px",
     objectFit: "cover",
   },
+
   removeImageBtn: {
     position: "absolute",
     top: "8px",
@@ -403,6 +418,13 @@ const styles = {
     cursor: "pointer",
     fontSize: "12px",
   },
+
+  helperText: {
+    marginTop: "6px",
+    color: "#7e6c9c",
+    fontSize: "11px",
+  },
+
   submitButton: {
     width: "100%",
     backgroundColor: "#5e35b1",
@@ -418,4 +440,4 @@ const styles = {
   },
 };
 
-export default ReportForm;  
+export default ReportForm;
