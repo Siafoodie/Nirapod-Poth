@@ -3,6 +3,7 @@ import Layout from "../components/Layout";
 import { Button } from "../components/UI";
 import { api } from "../api";
 import useGeolocation from "../hooks/useGeolocation";
+import { useLanguage } from "../context/LanguageContext";    
 
 export default function ImSafe() {
   const [contacts, setContacts] = useState([]);
@@ -17,6 +18,8 @@ export default function ImSafe() {
     getCurrentPosition,
     getMapsLink,
   } = useGeolocation();
+
+  const { t } = useLanguage();   
 
   // ==========================================
   // Load Trusted Contacts
@@ -42,7 +45,7 @@ export default function ImSafe() {
         setContacts([]);
 
         setStatus(
-          "Failed to load trusted contacts."
+          t("failedLoadContacts") || "Failed to load trusted contacts."
         );
 
         setStatusType("error");
@@ -78,7 +81,7 @@ export default function ImSafe() {
     // No trusted contacts
     if (contacts.length === 0) {
       setStatus(
-        "No trusted contacts found. Please add a trusted contact first."
+        t("noContactsFound") || "No trusted contacts found. Please add a trusted contact first."
       );
 
       setStatusType("error");
@@ -88,7 +91,7 @@ export default function ImSafe() {
     // No selected contacts
     if (selected.length === 0) {
       setStatus(
-        "Please select at least one trusted contact."
+        t("selectAtLeastOne")
       );
 
       setStatusType("error");
@@ -140,7 +143,7 @@ export default function ImSafe() {
 
       if (phoneNumbers.length === 0) {
         setStatus(
-          "Selected contacts do not have valid phone numbers."
+          t("noValidPhone") || "Selected contacts do not have valid phone numbers."
         );
 
         setStatusType("error");
@@ -178,7 +181,7 @@ export default function ImSafe() {
           .join(", ");
 
       setStatus(
-        `Opening SMS for: ${names}`
+        `${t("openingSms") || "Opening SMS for"}: ${names}`
       );
 
       setStatusType("success");
@@ -192,7 +195,7 @@ export default function ImSafe() {
     } catch (err) {
       setStatus(
         err.message ||
-          "Unable to prepare check-in. Please try again."
+          t("unableCheckIn") || "Unable to prepare check-in. Please try again."
       );
 
       setStatusType("error");
@@ -202,7 +205,7 @@ export default function ImSafe() {
   };
 
   return (
-    <Layout title="I'm Safe" back>
+    <Layout title={t("imSafe")} back>
 
       {/* Check Icon */}
       <div className="safecheck">
@@ -212,11 +215,11 @@ export default function ImSafe() {
       {/* Heading */}
       <div className="center">
         <h2>
-          Safety Check-In
+          {t("safetyCheckIn")}
         </h2>
 
         <p>
-          Send "I'm Safe" message to:
+          {t("sendImSafeMessage") || `Send "I'm Safe" message to:`}
         </p>
       </div>
 
@@ -265,9 +268,7 @@ export default function ImSafe() {
         ) : (
 
           <p className="muted">
-            No trusted contacts found.
-            Add trusted contacts from
-            your profile first.
+            {t("noContactsFound") || "No trusted contacts found. Add trusted contacts from your profile first."}
           </p>
 
         )}
@@ -278,9 +279,7 @@ export default function ImSafe() {
       <div className="toggleline">
 
         <h2>
-          Include current
-          <br />
-          location
+          {t("includeLocation")}
         </h2>
 
         <input
@@ -327,13 +326,13 @@ export default function ImSafe() {
       >
 
         {sending
-          ? "Preparing..."
+          ? t("loading")
           : statusType === "error"
-          ? "Retry Check-In"
-          : "Send I'm Safe"}
+          ? t("retryCheckIn") || "Retry Check-In"
+          : t("sendImSafe")}
 
       </Button>
 
     </Layout>
   );
-}
+}  
