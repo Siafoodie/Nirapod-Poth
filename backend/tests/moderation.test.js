@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import app from "../src/app.js";
 import Report from "../src/models/Report.js";
+import SafePlace from "../src/models/SafePlace.js";
 import User from "../src/models/User.js";
 import {
   MODERATION_STATUS,
@@ -529,3 +530,264 @@ describe("Review Workflow & Moderation Endpoints", () => {
     expect(res.body.user.role).toBe("user");
   });
 });
+
+describe("Safe-Place Verification Workflow (Admin Only)", () => {
+  const adminUserId = new mongoose.Types.ObjectId().toString();
+  const regularUserId = new mongoose.Types.ObjectId().toString();
+  const safePlaceId = new mongoose.Types.ObjectId().toString();
+
+  const adminUser = {
+    _id: adminUserId,
+    name: "Admin Officer",
+    email: "officer@nirapod.gov",
+    role: "admin",
+  };
+
+  const regularUser = {
+    _id: regularUserId,
+    name: "Regular User",
+    email: "user@example.com",
+    role: "user",
+  };
+
+  const adminToken = generateTestToken(adminUserId);
+  const userToken = generateTestToken(regularUserId);
+
+  const makeSafePlace = (overrides = {}) => ({
+    _id: safePlaceId,
+    name: "Dhanmondi Police Station",
+    category: "police",
+    address: "Dhanmondi, Dhaka",
+    coordinates: [90.3742, 23.7461],
+    phone: "01711-000000",
+    isOpen247: true,
+    verificationStatus: "pending",
+    verificationComment: "",
+    verifiedBy: null,
+    verifiedAt: null,
+    save: vi.fn().mockResolvedValue(true),
+    ...overrides,
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("SafePlace model defaults verificationStatus to 'pending'", () => {
+    const place = new SafePlace({
+      name: "Test Shelter",
+      category: "shelter",
+      address: "Mirpur, Dhaka",
+      coordinates: [90.3742, 23.8000],
+    });
+
+    expect(place.verificationStatus).toBe("pending");
+    expect(place.verificationComment).toBe("");
+    expect(place.verifiedBy).toBeNull();
+    expect(place.verifiedAt).toBeNull();
+  });
+
+  test("POST /api/safe-places strips client-supplied verificationStatus", async () => {
+    const createdPlace = makeSafePlace({ verificationStatus: "pending" });
+    const createSpy = vi.spyOn(SafePlace, "create").mockResolvedValue(createdPlace);
+
+    const res = await request(app)
+      .post("/api/safe-places")
+      .send({
+        name: "Dhanmondi Police Station",
+        category: "police",
+        address: "Dhanmondi, Dhaka",
+        coordinates: [90.3742, 23.7461],
+        verificationStatus: "approved", // Malicious injection attempt
+      });
+
+    expect(res.status).toBe(201);
+    // verificationStatus must NOT have been forwarded to create
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.not.objectContaining({ verificationStatus: "approved" })
+    );
+  });
+
+  test("GET /api/safe-places/moderation/queue rejects unauthenticated requests with 401", async () => {
+    const res = await request(app).get("/api/safe-places/moderation/queue");
+    expect(res.status).toBe(401);
+  });
+
+  test("GET /api/safe-places/moderation/queue rejects non-admin users with 403", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(regularUser),
+    });
+
+    const res = await request(app)
+      .get("/api/safe-places/moderation/queue")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/Admin privileges required/i);
+  });
+
+  test("GET /api/safe-places/moderation/queue returns pending places for admin", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+
+    const mockPlaces = [makeSafePlace()];
+    vi.spyOn(SafePlace, "find").mockReturnValue({
+      sort: vi.fn().mockResolvedValue(mockPlaces),
+    });
+
+    const res = await request(app)
+      .get("/api/safe-places/moderation/queue")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].verificationStatus).toBe("pending");
+  });
+
+  test("PATCH /api/safe-places/:id/approve rejects unauthenticated requests with 401", async () => {
+    const res = await request(app).patch(`/api/safe-places/${safePlaceId}/approve`);
+    expect(res.status).toBe(401);
+  });
+
+  test("PATCH /api/safe-places/:id/reject rejects unauthenticated requests with 401", async () => {
+    const res = await request(app).patch(`/api/safe-places/${safePlaceId}/reject`);
+    expect(res.status).toBe(401);
+  });
+
+  test("PATCH /api/safe-places/:id/approve rejects non-admin users with 403", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(regularUser),
+    });
+
+    const res = await request(app)
+      .patch(`/api/safe-places/${safePlaceId}/approve`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/Admin privileges required/i);
+  });
+
+  test("PATCH /api/safe-places/:id/reject rejects non-admin users with 403", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(regularUser),
+    });
+
+    const res = await request(app)
+      .patch(`/api/safe-places/${safePlaceId}/reject`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/Admin privileges required/i);
+  });
+
+  test("PATCH /api/safe-places/:id/approve approves a pending safe place", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+
+    const place = makeSafePlace();
+    vi.spyOn(SafePlace, "findById").mockResolvedValue(place);
+
+    const res = await request(app)
+      .patch(`/api/safe-places/${safePlaceId}/approve`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ comment: "Location verified by field team" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(place.verificationStatus).toBe("approved");
+    expect(place.verificationComment).toBe("Location verified by field team");
+    expect(place.verifiedBy).toBe(adminUserId);
+    expect(place.verifiedAt).toBeInstanceOf(Date);
+    expect(place.save).toHaveBeenCalled();
+  });
+
+  test("PATCH /api/safe-places/:id/reject rejects a pending safe place with reason", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+
+    const place = makeSafePlace();
+    vi.spyOn(SafePlace, "findById").mockResolvedValue(place);
+
+    const res = await request(app)
+      .patch(`/api/safe-places/${safePlaceId}/reject`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ reason: "Address does not match any known location" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(place.verificationStatus).toBe("rejected");
+    expect(place.verificationComment).toBe("Address does not match any known location");
+    expect(place.verifiedBy).toBe(adminUserId);
+    expect(place.verifiedAt).toBeInstanceOf(Date);
+    expect(place.save).toHaveBeenCalled();
+  });
+
+  test("PATCH /api/safe-places/:id/approve returns 400 if already approved", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+
+    const place = makeSafePlace({ verificationStatus: "approved" });
+    vi.spyOn(SafePlace, "findById").mockResolvedValue(place);
+
+    const res = await request(app)
+      .patch(`/api/safe-places/${safePlaceId}/approve`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/already in 'approved' status/i);
+    expect(place.save).not.toHaveBeenCalled();
+  });
+
+  test("PATCH /api/safe-places/:id/reject returns 400 if already rejected", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+
+    const place = makeSafePlace({ verificationStatus: "rejected" });
+    vi.spyOn(SafePlace, "findById").mockResolvedValue(place);
+
+    const res = await request(app)
+      .patch(`/api/safe-places/${safePlaceId}/reject`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/already in 'rejected' status/i);
+    expect(place.save).not.toHaveBeenCalled();
+  });
+
+  test("PATCH /api/safe-places/:id/approve returns 404 for unknown ID", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+    vi.spyOn(SafePlace, "findById").mockResolvedValue(null);
+
+    const unknownId = new mongoose.Types.ObjectId().toString();
+    const res = await request(app)
+      .patch(`/api/safe-places/${unknownId}/approve`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toMatch(/Safe place not found/i);
+  });
+
+  test("PATCH /api/safe-places/:id/reject returns 400 for malformed ID", async () => {
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockResolvedValue(adminUser),
+    });
+
+    const res = await request(app)
+      .patch("/api/safe-places/not-a-valid-id/reject")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Invalid safe-place ID/i);
+  });
+});
+

@@ -8,6 +8,10 @@ const {
   isValidStatus,
   isValidTransition,
 } = require('../utils/moderationConstants');
+const {
+  upvoteReport,
+  downvoteReport,
+} = require('../controllers/voteController');
 
 const router = express.Router();
 
@@ -677,6 +681,14 @@ router.get(
     }
   }
 );
+
+
+// ======================================================
+// UPVOTE / DOWNVOTE (Card Actions)
+// ======================================================
+
+router.post('/:id/upvote', upvoteReport);
+router.post('/:id/downvote', downvoteReport);
 
 
 // ======================================================

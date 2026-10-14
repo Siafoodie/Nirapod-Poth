@@ -40,6 +40,31 @@ const safePlaceSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // ── Verification / Moderation Fields ────────────────────────────────────
+    verificationStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+
+    verificationComment: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    // ────────────────────────────────────────────────────────────────────────
   },
   { timestamps: true },
 );
