@@ -1,7 +1,9 @@
+
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../api";
 import { Button } from "../components/UI";
+import { saveUser } from "../utils/userStorage";
 
 export default function Auth({ register = false }) {
   const navigate = useNavigate();
@@ -13,34 +15,64 @@ export default function Auth({ register = false }) {
   });
 
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (submitting) return;
+
     setError("");
+    setSubmitting(true);
 
     try {
+      const payload = register
+        ? {
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            password: formData.password,
+          }
+        : {
+            email: formData.email.trim(),
+            password: formData.password,
+          };
+
       const data = await api(
         register ? "/auth/register" : "/auth/login",
         {
           method: "POST",
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         }
       );
 
+      if (!data.token || !data.user) {
+        throw new Error("Invalid authentication response.");
+      }
+
+      // Existing authentication flow still uses this token.
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Store only approved user fields.
+      saveUser(data.user);
+
+      // Clear password from component state.
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+      });
 
       navigate("/home");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Authentication failed.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="phone auth">
       <div className="authbox">
-
-        {/* Nirapod Poth Logo */}
         <img
           src="/nirapod-logo.png"
           alt="Nirapod Poth"
@@ -58,38 +90,34 @@ export default function Auth({ register = false }) {
         </p>
 
         <form onSubmit={handleSubmit}>
-
-          {/* Name only for Registration */}
           {register && (
             <input
               type="text"
               placeholder="Name"
               value={formData.name}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
+                setFormData((prev) => ({
+                  ...prev,
                   name: e.target.value,
-                })
+                }))
               }
               required
             />
           )}
 
-          {/* Email */}
           <input
             type="email"
             required
             placeholder="Email"
             value={formData.email}
             onChange={(e) =>
-              setFormData({
-                ...formData,
+              setFormData((prev) => ({
+                ...prev,
                 email: e.target.value,
-              })
+              }))
             }
           />
 
-          {/* Password */}
           <input
             type="password"
             required
@@ -97,24 +125,26 @@ export default function Auth({ register = false }) {
             placeholder="Password"
             value={formData.password}
             onChange={(e) =>
-              setFormData({
-                ...formData,
+              setFormData((prev) => ({
+                ...prev,
                 password: e.target.value,
-              })
+              }))
             }
           />
 
-          {/* Error Message */}
           {error && (
             <div className="error">
               {error}
             </div>
           )}
 
-          <Button type="submit">
-            {register ? "Create Account" : "Sign In"}
+          <Button type="submit" disabled={submitting}>
+            {submitting
+              ? "Please wait..."
+              : register
+                ? "Create Account"
+                : "Sign In"}
           </Button>
-
         </form>
 
         <p className="authswitch">
@@ -126,7 +156,6 @@ export default function Auth({ register = false }) {
             {register ? "Sign In" : "Create Account"}
           </Link>
         </p>
-
       </div>
     </div>
   );
