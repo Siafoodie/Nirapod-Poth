@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { MODERATION_STATUS } = require("../utils/moderationConstants");
 
 const voteSchema = new mongoose.Schema(
   {
@@ -63,8 +64,25 @@ const reportSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "reviewed", "resolved"],
-      default: "pending",
+      enum: Object.values(MODERATION_STATUS),
+      default: MODERATION_STATUS.PENDING,
+    },
+
+    moderationComment: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    reviewedAt: {
+      type: Date,
+      default: null,
     },
 
     upvotes: {

@@ -2,6 +2,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Report = require('../models/Report');
 const voteRateLimiter = require('../middleware/voteRateLimiter');
+const { protect, requireAdmin } = require('../middleware/authMiddleware');
+const {
+  MODERATION_STATUS,
+  isValidStatus,
+  isValidTransition,
+} = require('../utils/moderationConstants');
 
 const router = express.Router();
 
@@ -204,7 +210,19 @@ router.get('/', async (req, res) => {
       });
     }
 
-    const reports = await Report.find()
+    const filter = {};
+    if (req.query.status !== undefined) {
+      const requestedStatus = String(req.query.status).trim().toLowerCase();
+      if (!isValidStatus(requestedStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status filter: ${req.query.status}`,
+        });
+      }
+      filter.status = requestedStatus;
+    }
+
+    const reports = await Report.find(filter)
       .sort({
         createdAt: -1,
       })
@@ -421,21 +439,13 @@ router.post(
       }
 
       // ------------------------------------------
-      // Validate User Location
+      // Validate User Location (Optional)
       // ------------------------------------------
 
-      const userLatitude =
-        Number(latitude);
+      const hasLatitude = latitude !== undefined && latitude !== null;
+      const hasLongitude = longitude !== undefined && longitude !== null;
 
-      const userLongitude =
-        Number(longitude);
-
-      if (
-        !isValidCoordinates(
-          userLatitude,
-          userLongitude
-        )
-      ) {
+      if (hasLatitude !== hasLongitude) {
         return res.status(400).json({
           success: false,
           message:
@@ -443,82 +453,73 @@ router.post(
         });
       }
 
-      // ------------------------------------------
-      // Find Report
-      // ------------------------------------------
+      if (hasLatitude && hasLongitude) {
+        const userLatitude = Number(latitude);
+        const userLongitude = Number(longitude);
 
-      const existingReport =
-        await Report.findById(reportId);
+        if (
+          !isValidCoordinates(
+            userLatitude,
+            userLongitude
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              'Valid latitude and longitude are required to vote',
+          });
+        }
 
-      if (!existingReport) {
-        return res.status(404).json({
-          success: false,
-          message: 'Report not found',
-        });
-      }
+        // ------------------------------------------
+        // Find Report & Validate Location
+        // ------------------------------------------
 
-      // ------------------------------------------
-      // Validate Report Location
-      // ------------------------------------------
+        const existingReport =
+          await Report.findById(reportId);
 
-      const reportCoordinates =
-        existingReport.geo?.coordinates;
+        if (!existingReport) {
+          return res.status(404).json({
+            success: false,
+            message: 'Report not found',
+          });
+        }
 
-      if (
-        !Array.isArray(reportCoordinates) ||
-        reportCoordinates.length !== 2
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'This report does not have valid location information',
-        });
-      }
+        const reportCoordinates =
+          existingReport.geo?.coordinates;
 
-      const reportLongitude =
-        Number(reportCoordinates[0]);
+        if (
+          !Array.isArray(reportCoordinates) ||
+          reportCoordinates.length !== 2 ||
+          !isValidCoordinates(
+            Number(reportCoordinates[1]),
+            Number(reportCoordinates[0])
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              'This report does not have valid location information',
+          });
+        }
 
-      const reportLatitude =
-        Number(reportCoordinates[1]);
+        const distanceKm =
+          calculateDistanceKm(
+            userLatitude,
+            userLongitude,
+            Number(reportCoordinates[1]),
+            Number(reportCoordinates[0])
+          );
 
-      if (
-        !isValidCoordinates(
-          reportLatitude,
-          reportLongitude
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'This report does not have valid location information',
-        });
-      }
-
-      // ------------------------------------------
-      // Calculate Distance
-      // ------------------------------------------
-
-      const distanceKm =
-        calculateDistanceKm(
-          userLatitude,
-          userLongitude,
-          reportLatitude,
-          reportLongitude
-        );
-
-      // ------------------------------------------
-      // Proximity Restriction
-      // ------------------------------------------
-
-      if (
-        distanceKm >
-        MAX_VOTING_DISTANCE_KM
-      ) {
-        return res.status(403).json({
-          success: false,
-          message:
-            'You can only vote on reports within 5 km of your location.',
-        });
+        if (
+          distanceKm >
+          MAX_VOTING_DISTANCE_KM
+        ) {
+          return res.status(403).json({
+            success: false,
+            message:
+              'You can only vote on reports within 5 km of your location.',
+          });
+        }
       }
 
       // ------------------------------------------
@@ -676,6 +677,196 @@ router.get(
     }
   }
 );
+
+
+// ======================================================
+// GET Moderation Queue (Admin Only)
+// ======================================================
+
+router.get('/moderation/queue', protect, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit) || DEFAULT_LIMIT;
+    const filter = {};
+
+    if (req.query.status !== undefined) {
+      const requestedStatus = String(req.query.status).trim().toLowerCase();
+      if (!isValidStatus(requestedStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status filter: ${req.query.status}`,
+        });
+      }
+      filter.status = requestedStatus;
+    } else {
+      // By default, queue shows reports requiring moderation attention
+      filter.status = {
+        $in: [
+          MODERATION_STATUS.PENDING,
+          MODERATION_STATUS.UNDER_REVIEW,
+          MODERATION_STATUS.NEEDS_REVISION,
+        ],
+      };
+    }
+
+    const reports = await Report.find(filter)
+      .sort({ createdAt: 1 })
+      .limit(limit);
+
+    return res.status(200).json({
+      success: true,
+      count: reports.length,
+      data: reports.map((report) => toReportResponse(report)),
+    });
+  } catch (error) {
+    console.error('Moderation queue error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load moderation queue',
+      error: error.message,
+    });
+  }
+});
+
+
+// ======================================================
+// GET Report Details by ID
+// ======================================================
+
+router.get('/:id', async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report ID',
+      });
+    }
+
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: toReportResponse(report),
+    });
+  } catch (error) {
+    console.error('Get report details error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load report',
+      error: error.message,
+    });
+  }
+});
+
+
+// ======================================================
+// MODERATION REVIEW WORKFLOW
+// ======================================================
+
+const updateModerationStatus = async (req, res, targetStatusOverride) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report ID',
+      });
+    }
+
+    const rawTargetStatus = targetStatusOverride || req.body?.status;
+
+    if (!rawTargetStatus || typeof rawTargetStatus !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid moderation status is required',
+      });
+    }
+
+    const targetStatus = rawTargetStatus.trim().toLowerCase();
+
+    if (!isValidStatus(targetStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid moderation status: ${rawTargetStatus}. Valid statuses are: ${Object.values(MODERATION_STATUS).join(', ')}`,
+      });
+    }
+
+    const report = await Report.findById(id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found',
+      });
+    }
+
+    if (report.status === targetStatus) {
+      return res.status(400).json({
+        success: false,
+        message: `Report is already in '${targetStatus}' status`,
+      });
+    }
+
+    if (!isValidTransition(report.status, targetStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status transition: cannot change status from '${report.status}' to '${targetStatus}'`,
+      });
+    }
+
+    const comment =
+      req.body?.comment ||
+      req.body?.moderationComment ||
+      req.body?.reason ||
+      '';
+
+    report.status = targetStatus;
+    report.moderationComment = String(comment).trim();
+    report.reviewedBy = req.user ? req.user._id : null;
+    report.reviewedAt = new Date();
+
+    await report.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Report status updated to '${targetStatus}' successfully`,
+      data: toReportResponse(report),
+    });
+  } catch (error) {
+    console.error('Moderation status update error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update report status',
+      error: error.message,
+    });
+  }
+};
+
+// General status update endpoint (Admin only)
+router.patch('/:id/status', protect, requireAdmin, (req, res) => {
+  return updateModerationStatus(req, res);
+});
+
+router.put('/:id/status', protect, requireAdmin, (req, res) => {
+  return updateModerationStatus(req, res);
+});
+
+// Direct approval endpoint (Admin only)
+router.patch('/:id/approve', protect, requireAdmin, (req, res) => {
+  return updateModerationStatus(req, res, MODERATION_STATUS.APPROVED);
+});
+
+// Direct rejection endpoint (Admin only)
+router.patch('/:id/reject', protect, requireAdmin, (req, res) => {
+  return updateModerationStatus(req, res, MODERATION_STATUS.REJECTED);
+});
 
 
 module.exports = router;
