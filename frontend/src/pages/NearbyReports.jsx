@@ -1,6 +1,8 @@
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { getStoredUser } from "../utils/userStorage";
 
 export default function NearbyReports() {
   const [reports, setReports] = useState([]);
@@ -12,30 +14,20 @@ export default function NearbyReports() {
   // ==========================================
   // Get Logged-in User
   // ==========================================
-  let storedUser = null;
 
-  try {
-    const savedUser = localStorage.getItem("user");
+  const storedUser = getStoredUser();
 
-    if (savedUser) {
-      storedUser = JSON.parse(savedUser);
-    }
-  } catch (err) {
-    console.error("Failed to read logged-in user:", err);
-  }
-
-  // Use unique user ID.
-  // Fallback to email if backend user object has no _id/id.
   const voterId =
-    storedUser?._id ||
-    storedUser?.id ||
-    storedUser?.email ||
-    null;
+    storedUser?._id != null
+      ? String(storedUser._id)
+      : storedUser?.id != null
+        ? String(storedUser.id)
+        : null;
 
   // ==========================================
   // Sort Reports by Credibility Score
-  // Highest Score First
   // ==========================================
+
   const sortReportsByScore = (reportList) => {
     return [...reportList].sort((a, b) => {
       const scoreA =
@@ -53,9 +45,11 @@ export default function NearbyReports() {
   // ==========================================
   // Load Nearby Reports
   // ==========================================
+
   const loadNearbyReports = () => {
     setError("");
     setLoading(true);
+    setLocation(null);
 
     if (!navigator.geolocation) {
       setError(
@@ -97,12 +91,10 @@ export default function NearbyReports() {
           setLoading(false);
         }
       },
-
       () => {
         setError(
           "Unable to access your location. Please allow location permission."
         );
-
         setLoading(false);
       }
     );
@@ -111,6 +103,7 @@ export default function NearbyReports() {
   // ==========================================
   // Load Reports When Page Opens
   // ==========================================
+
   useEffect(() => {
     loadNearbyReports();
   }, []);
@@ -118,12 +111,10 @@ export default function NearbyReports() {
   // ==========================================
   // Vote
   // ==========================================
+
   const handleVote = async (reportId, vote) => {
     setError("");
 
-    // ------------------------------------------
-    // Login Check
-    // ------------------------------------------
     if (!voterId) {
       setError(
         "Please sign in before voting."
@@ -131,9 +122,6 @@ export default function NearbyReports() {
       return;
     }
 
-    // ------------------------------------------
-    // Offline Check
-    // ------------------------------------------
     if (!navigator.onLine) {
       setError(
         "You are offline. Your vote was not submitted. Please reconnect and try again."
@@ -141,15 +129,14 @@ export default function NearbyReports() {
       return;
     }
 
-    // ------------------------------------------
-    // Location Check
-    // ------------------------------------------
     if (!location) {
       setError(
         "Your location is required before voting. Please refresh nearby reports."
       );
       return;
     }
+
+    if (votingId) return;
 
     setVotingId(reportId);
 
@@ -158,7 +145,6 @@ export default function NearbyReports() {
         `/reports/${reportId}/vote`,
         {
           method: "POST",
-
           body: JSON.stringify({
             voterId,
             vote,
@@ -170,34 +156,21 @@ export default function NearbyReports() {
 
       const updatedReport = response.data;
 
-      // ------------------------------------------
-      // Update Vote + Ranking Immediately
-      // ------------------------------------------
       setReports((currentReports) => {
-        const updatedReports =
-          currentReports.map((report) =>
+        const updatedReports = currentReports.map(
+          (report) =>
             report._id === reportId
               ? {
                   ...report,
-
-                  upvotes:
-                    updatedReport.upvotes,
-
-                  downvotes:
-                    updatedReport.downvotes,
-
-                  score:
-                    updatedReport.score,
-
-                  userVote:
-                    updatedReport.userVote,
+                  upvotes: updatedReport.upvotes,
+                  downvotes: updatedReport.downvotes,
+                  score: updatedReport.score,
+                  userVote: updatedReport.userVote,
                 }
               : report
-          );
-
-        return sortReportsByScore(
-          updatedReports
         );
+
+        return sortReportsByScore(updatedReports);
       });
     } catch (err) {
       setError(
@@ -217,30 +190,25 @@ export default function NearbyReports() {
         padding: "30px 20px",
       }}
     >
-      {/* Back Button */}
+      {/* BACK BUTTON */}
+
       <Link to="/">
         ← Back to Home
       </Link>
 
-      {/* Header */}
-      <h1
-        style={{
-          marginTop: "25px",
-        }}
-      >
+      {/* HEADER */}
+
+      <h1 style={{ marginTop: "25px" }}>
         Nearby Incident Reports
       </h1>
 
-      <p
-        style={{
-          color: "#666",
-        }}
-      >
+      <p style={{ color: "#666" }}>
         View incidents reported near your current
         location and vote on their reliability.
       </p>
 
-      {/* Login Information */}
+      {/* LOGIN INFORMATION */}
+
       {!voterId && (
         <div
           style={{
@@ -255,7 +223,8 @@ export default function NearbyReports() {
         </div>
       )}
 
-      {/* Location Information */}
+      {/* LOCATION INFORMATION */}
+
       {location && (
         <p
           style={{
@@ -268,7 +237,8 @@ export default function NearbyReports() {
         </p>
       )}
 
-      {/* Ranking Information */}
+      {/* RANKING INFORMATION */}
+
       {reports.length > 0 && (
         <p
           style={{
@@ -282,7 +252,8 @@ export default function NearbyReports() {
         </p>
       )}
 
-      {/* Refresh Button */}
+      {/* REFRESH BUTTON */}
+
       <button
         type="button"
         onClick={loadNearbyReports}
@@ -290,7 +261,6 @@ export default function NearbyReports() {
         style={{
           padding: "10px 16px",
           marginBottom: "20px",
-
           cursor: loading
             ? "not-allowed"
             : "pointer",
@@ -301,7 +271,8 @@ export default function NearbyReports() {
           : "Refresh Nearby Reports"}
       </button>
 
-      {/* Error Message */}
+      {/* ERROR MESSAGE */}
+
       {error && (
         <div
           style={{
@@ -316,7 +287,8 @@ export default function NearbyReports() {
         </div>
       )}
 
-      {/* No Reports */}
+      {/* NO REPORTS */}
+
       {!loading &&
         !error &&
         reports.length === 0 && (
@@ -331,7 +303,8 @@ export default function NearbyReports() {
           </div>
         )}
 
-      {/* Reports */}
+      {/* REPORT LIST */}
+
       {reports.map((report, index) => (
         <article
           key={report._id}
@@ -343,7 +316,8 @@ export default function NearbyReports() {
             background: "#fff",
           }}
         >
-          {/* Credibility Ranking */}
+          {/* CREDIBILITY RANK */}
+
           <p
             style={{
               marginTop: 0,
@@ -355,27 +329,25 @@ export default function NearbyReports() {
             Credibility Rank #{index + 1}
           </p>
 
-          {/* Incident Type */}
-          <h2
-            style={{
-              marginTop: 0,
-            }}
-          >
+          {/* INCIDENT TYPE */}
+
+          <h2 style={{ marginTop: 0 }}>
             {report.incidentType}
           </h2>
 
-          {/* Location */}
+          {/* LOCATION */}
+
           <p>
             <strong>Location:</strong>{" "}
             {report.location}
           </p>
 
-          {/* Description */}
-          <p>
-            {report.description}
-          </p>
+          {/* DESCRIPTION */}
 
-          {/* Voting Section */}
+          <p>{report.description}</p>
+
+          {/* VOTING SECTION */}
+
           <div
             style={{
               display: "flex",
@@ -385,89 +357,72 @@ export default function NearbyReports() {
               marginTop: "18px",
             }}
           >
-            {/* Upvote */}
+            {/* UPVOTE */}
+
             <button
               type="button"
-              disabled={
-                votingId === report._id
-              }
+              disabled={votingId !== null}
               onClick={() =>
-                handleVote(
-                  report._id,
-                  "upvote"
-                )
+                handleVote(report._id, "upvote")
               }
               style={{
                 padding: "9px 14px",
-
                 cursor:
-                  votingId === report._id
+                  votingId !== null
                     ? "not-allowed"
                     : "pointer",
-
                 fontWeight:
                   report.userVote === "upvote"
                     ? "bold"
                     : "normal",
-
                 backgroundColor:
                   report.userVote === "upvote"
                     ? "#dcfce7"
                     : "#ffffff",
-
                 border:
                   report.userVote === "upvote"
                     ? "2px solid #16a34a"
                     : "1px solid #aaa",
-
                 borderRadius: "6px",
               }}
             >
               👍 Upvote ({report.upvotes || 0})
             </button>
 
-            {/* Downvote */}
+            {/* DOWNVOTE */}
+
             <button
               type="button"
-              disabled={
-                votingId === report._id
-              }
+              disabled={votingId !== null}
               onClick={() =>
-                handleVote(
-                  report._id,
-                  "downvote"
-                )
+                handleVote(report._id, "downvote")
               }
               style={{
                 padding: "9px 14px",
-
                 cursor:
-                  votingId === report._id
+                  votingId !== null
                     ? "not-allowed"
                     : "pointer",
-
                 fontWeight:
                   report.userVote === "downvote"
                     ? "bold"
                     : "normal",
-
                 backgroundColor:
                   report.userVote === "downvote"
                     ? "#fee2e2"
                     : "#ffffff",
-
                 border:
                   report.userVote === "downvote"
                     ? "2px solid #dc2626"
                     : "1px solid #aaa",
-
                 borderRadius: "6px",
               }}
             >
               👎 Downvote ({report.downvotes || 0})
             </button>
 
-            {/* Score */}
+            {/* SCORE */}
+
             <strong>
               Score:{" "}
               {report.score ??
@@ -476,7 +431,8 @@ export default function NearbyReports() {
             </strong>
           </div>
 
-          {/* Current User Vote */}
+          {/* CURRENT USER VOTE */}
+
           {report.userVote && (
             <p
               style={{
@@ -494,7 +450,8 @@ export default function NearbyReports() {
             </p>
           )}
 
-          {/* Vote Loading */}
+          {/* VOTE LOADING */}
+
           {votingId === report._id && (
             <p
               style={{

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Diamond, Circle } from "lucide-react";
@@ -5,15 +6,16 @@ import Layout from "../components/Layout";
 import { Row } from "../components/UI";
 import { API_BASE_URL, api } from "../api";
 
+import {
+  getStoredUser,
+  saveUser,
+  clearStoredUser,
+} from "../utils/userStorage";
+
 export default function Profile() {
   const navigate = useNavigate();
-  const cachedUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
-    } catch {
-      return {};
-    }
-  })();
+
+  const cachedUser = getStoredUser() || {};
 
   const [profile, setProfile] = useState({
     name: cachedUser.name || "",
@@ -34,9 +36,26 @@ export default function Profile() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // =========================
+  const updateProfileState = (user) => {
+    const updated = {
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      profileImage: user.profileImage || "",
+    };
+
+    setProfile(updated);
+
+    setEditData({
+      name: updated.name,
+      phone: updated.phone,
+    });
+  };
+
+  // ==========================================
   // LOAD USER PROFILE
-  // =========================
+  // ==========================================
+
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -45,23 +64,21 @@ export default function Profile() {
 
         const data = await api("/profile");
 
-        setProfile({
-          name: data.user.name || "",
-          email: data.user.email || "",
-          phone: data.user.phone || "",
-          profileImage: data.user.profileImage || "",
-        });
+        if (!data.user) {
+          throw new Error("Profile information unavailable.");
+        }
 
-        setEditData({
-          name: data.user.name || "",
-          phone: data.user.phone || "",
-        });
+        updateProfileState(data.user);
+
+        // Replace old cached data with minimized data.
+        saveUser(data.user);
       } catch (err) {
         console.error("PROFILE LOAD ERROR:", err);
+
         setError(
-          profile.name || profile.email
-            ? `${err.message || "Failed to load profile"} Showing saved account information.`
-            : err.message || "Failed to load profile",
+          cachedUser.name || cachedUser.email
+            ? `${err.message || "Failed to load profile"}. Showing saved account information.`
+            : err.message || "Failed to load profile"
         );
       } finally {
         setLoading(false);
@@ -71,19 +88,23 @@ export default function Profile() {
     loadProfile();
   }, []);
 
-  // =========================
+  // ==========================================
   // SAVE PROFILE INFORMATION
-  // =========================
+  // ==========================================
+
   const handleSave = async () => {
+    if (saving) return;
+
+    setError("");
+    setMessage("");
+
+    if (!editData.name.trim()) {
+      setError("Name cannot be empty");
+      return;
+    }
+
     try {
       setSaving(true);
-      setError("");
-      setMessage("");
-
-      if (!editData.name.trim()) {
-        setError("Name cannot be empty");
-        return;
-      }
 
       const data = await api("/profile", {
         method: "PUT",
@@ -93,17 +114,14 @@ export default function Profile() {
         }),
       });
 
-      setProfile({
-        name: data.user.name || "",
-        email: data.user.email || "",
-        phone: data.user.phone || "",
-        profileImage: data.user.profileImage || "",
-      });
+      if (!data.user) {
+        throw new Error("Invalid profile update response.");
+      }
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user)
-      );
+      updateProfileState(data.user);
+
+      // Store only approved user fields.
+      saveUser(data.user);
 
       setEditing(false);
       setMessage("Profile updated successfully!");
@@ -116,15 +134,14 @@ export default function Profile() {
     }
   };
 
-  // =========================
+  // ==========================================
   // UPLOAD PROFILE IMAGE
-  // =========================
+  // ==========================================
+
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     const allowedTypes = [
       "image/jpeg",
@@ -140,7 +157,6 @@ export default function Profile() {
       return;
     }
 
-    // Maximum 5 MB
     if (file.size > 5 * 1024 * 1024) {
       setError(
         "Profile image must be smaller than 5 MB."
@@ -187,17 +203,16 @@ export default function Profile() {
         );
       }
 
-      setProfile({
-        name: data.user.name || "",
-        email: data.user.email || "",
-        phone: data.user.phone || "",
-        profileImage: data.user.profileImage || "",
-      });
+      if (!data.user) {
+        throw new Error(
+          "Invalid profile image response."
+        );
+      }
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user)
-      );
+      updateProfileState(data.user);
+
+      // Avoid saving the entire backend user object.
+      saveUser(data.user);
 
       setMessage(
         "Profile image updated successfully!"
@@ -211,15 +226,14 @@ export default function Profile() {
       );
     } finally {
       setUploading(false);
-
-      // Allows selecting the same image again
       e.target.value = "";
     }
   };
 
-  // =========================
+  // ==========================================
   // CANCEL EDIT
-  // =========================
+  // ==========================================
+
   const handleCancel = () => {
     setEditData({
       name: profile.name || "",
@@ -231,19 +245,21 @@ export default function Profile() {
     setMessage("");
   };
 
-  // =========================
+  // ==========================================
   // LOGOUT
-  // =========================
+  // ==========================================
+
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearStoredUser();
 
     navigate("/login");
   };
 
-  // =========================
+  // ==========================================
   // LOADING
-  // =========================
+  // ==========================================
+
   if (loading) {
     return (
       <Layout title="Profile" back>
@@ -254,18 +270,20 @@ export default function Profile() {
     );
   }
 
+  const profileImageUrl = profile.profileImage
+    ? `${API_BASE_URL.replace(/\/api\/?$/, "")}${profile.profileImage}`
+    : "";
+
   return (
     <Layout title="Profile" back>
-      {/* =========================
-          PROFILE HEADER
-      ========================== */}
+      {/* PROFILE HEADER */}
 
       <div className="profilehead">
         <div className="profile-avatar-section">
           <div className="avatar">
             {profile.profileImage ? (
               <img
-                src={`${API_BASE_URL.replace(/\/api\/?$/, "")}${profile.profileImage}`}
+                src={profileImageUrl}
                 alt={`${profile.name || "User"} profile`}
                 className="profile-avatar-image"
                 onError={(e) => {
@@ -274,9 +292,7 @@ export default function Profile() {
               />
             ) : (
               profile.name
-                ? profile.name
-                    .charAt(0)
-                    .toUpperCase()
+                ? profile.name.charAt(0).toUpperCase()
                 : "U"
             )}
           </div>
@@ -302,9 +318,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* =========================
-          PERSONAL INFORMATION
-      ========================== */}
+      {/* PERSONAL INFORMATION */}
 
       <div className="profile-info">
         <h3>Personal Information</h3>
@@ -332,16 +346,14 @@ export default function Profile() {
               value={editData.name}
               placeholder="Enter your name"
               onChange={(e) =>
-                setEditData({
-                  ...editData,
+                setEditData((prev) => ({
+                  ...prev,
                   name: e.target.value,
-                })
+                }))
               }
             />
           ) : (
-            <p>
-              {profile.name || "Not provided"}
-            </p>
+            <p>{profile.name || "Not provided"}</p>
           )}
         </div>
 
@@ -350,9 +362,7 @@ export default function Profile() {
         <div className="profile-field">
           <label>Email</label>
 
-          <p>
-            {profile.email || "Not provided"}
-          </p>
+          <p>{profile.email || "Not provided"}</p>
         </div>
 
         {/* PHONE */}
@@ -366,16 +376,14 @@ export default function Profile() {
               value={editData.phone}
               placeholder="Enter phone number"
               onChange={(e) =>
-                setEditData({
-                  ...editData,
+                setEditData((prev) => ({
+                  ...prev,
                   phone: e.target.value,
-                })
+                }))
               }
             />
           ) : (
-            <p>
-              {profile.phone || "Not provided"}
-            </p>
+            <p>{profile.phone || "Not provided"}</p>
           )}
         </div>
 
@@ -386,6 +394,11 @@ export default function Profile() {
             type="button"
             className="profile-edit-btn"
             onClick={() => {
+              setEditData({
+                name: profile.name || "",
+                phone: profile.phone || "",
+              });
+
               setEditing(true);
               setMessage("");
               setError("");
@@ -401,9 +414,7 @@ export default function Profile() {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving
-                ? "Saving..."
-                : "Save Changes"}
+              {saving ? "Saving..." : "Save Changes"}
             </button>
 
             <button
@@ -418,17 +429,13 @@ export default function Profile() {
         )}
       </div>
 
-      {/* =========================
-          SAFETY
-      ========================== */}
+      {/* SAFETY */}
 
       <h3>Safety</h3>
 
       <Row
         icon={<Diamond />}
-        onClick={() =>
-          navigate("/trusted-contact")
-        }
+        onClick={() => navigate("/trusted-contact")}
       >
         Trusted Contacts
       </Row>
@@ -441,17 +448,13 @@ export default function Profile() {
         Location Permission
       </Row>
 
-      {/* =========================
-          APP
-      ========================== */}
+      {/* APP */}
 
       <h3>App</h3>
 
       <Row
         icon={<Circle />}
-        onClick={() =>
-          navigate("/emergency")
-        }
+        onClick={() => navigate("/emergency")}
       >
         Emergency Helplines
       </Row>
