@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card, Row } from "../components/UI";
-import { IncidentCard } from "../components/IncidentCard";
+import IncidentCard from "../components/IncidentCard";
 import { api } from "../api";
 
 export default function Home() {

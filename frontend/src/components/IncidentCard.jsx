@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../api';
 
-export default function IncidentCard({ report }) {
+export function IncidentCard({ report }) {
   const [votes, setVotes] = useState(report?.score ?? 0);
   const [userVote, setUserVote] = useState(null); // 'up', 'down', or null
   const [loading, setLoading] = useState(false);
@@ -214,4 +214,6 @@ export default function IncidentCard({ report }) {
       </div>
     </div>
   );
-}  
+}
+
+export default IncidentCard;
