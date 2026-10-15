@@ -1,7 +1,7 @@
+
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-// Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign(
     { id: userId },
@@ -12,15 +12,25 @@ const generateToken = (userId) => {
   );
 };
 
-// ==============================
+const publicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role || "user",
+});
+
 // REGISTER USER
-// ==============================
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body || {};
 
-    // Validate fields
-    if (!name || !email || !password) {
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      typeof email !== "string" ||
+      !email.trim() ||
+      typeof password !== "string"
+    ) {
       return res.status(400).json({
         message: "Name, email and password are required",
       });
@@ -32,9 +42,10 @@ const register = async (req, res) => {
       });
     }
 
-    // Check existing user
+    const normalizedEmail = email.trim().toLowerCase();
+
     const existingUser = await User.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
     });
 
     if (existingUser) {
@@ -43,27 +54,28 @@ const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // Do not accept role from request body.
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password,
     });
 
-    // Generate token
     const token = generateToken(user._id);
 
     return res.status(201).json({
       message: "Account created successfully",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      user: publicUser(user),
     });
   } catch (error) {
-    console.error("Register Error:", error);
+    console.error("Register Error:", error.code || error.name);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: "User already exists with this email",
+      });
+    }
 
     return res.status(500).json({
       message: "Server error while creating account",
@@ -71,22 +83,24 @@ const register = async (req, res) => {
   }
 };
 
-// ==============================
 // LOGIN USER
-// ==============================
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
-    if (!email || !password) {
+    if (
+      typeof email !== "string" ||
+      !email.trim() ||
+      typeof password !== "string" ||
+      !password
+    ) {
       return res.status(400).json({
         message: "Email and password are required",
       });
     }
 
-    // Find user
     const user = await User.findOne({
-      email: email.toLowerCase(),
+      email: email.trim().toLowerCase(),
     });
 
     if (!user) {
@@ -95,7 +109,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Compare password
     const passwordMatches = await user.comparePassword(password);
 
     if (!passwordMatches) {
@@ -104,20 +117,15 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = generateToken(user._id);
 
     return res.status(200).json({
       message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      user: publicUser(user),
     });
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("Login Error:", error.code || error.name);
 
     return res.status(500).json({
       message: "Server error while logging in",
