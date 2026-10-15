@@ -1,4 +1,6 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import RouteSafety from "./pages/RouteSafety.jsx";
 import Home from "./pages/Home.jsx";
 import Auth from "./pages/Auth.jsx";
@@ -10,6 +12,7 @@ import ReportForm from "./components/ReportForm.jsx";
 import SafePlaces from "./pages/SafePlaces.jsx";
 import EmergencySOS from "./components/EmergencySOS.jsx";
 import NearbyReports from "./pages/NearbyReports.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 
 function App() {
   return (
@@ -30,9 +33,13 @@ function App() {
         <Route path="/report" element={<ReportForm />} />
         <Route path="/safe-places" element={<SafePlaces />} />
         <Route path="/map" element={<SafePlaces />} />
+        <Route
+          path="/admin/reports"
+          element={<AdminDashboard />}
+        />
       </Routes>
     </BrowserRouter>
   );
 }
 
-export default App; 
+export default App;
