@@ -17,10 +17,12 @@ const errorHandler = (err, req, res, next) => {
   // Log only safe diagnostic information.
   // Never log request body, tokens or full stack traces.
   console.error("API Error:", {
-    type: err.name || "Error",
-    statusCode,
-  });
-
+  type: err.name,
+  message: err.message,
+  statusCode,
+  stack: err.stack,
+});
+    
   // Do not expose internal error messages or stack traces.
   const message =
     statusCode === 400
