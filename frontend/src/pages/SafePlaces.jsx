@@ -171,8 +171,30 @@ export default function SafePlaces() {
   };
 
   useEffect(() => {
-    loadNearbyPlaces(DEFAULT_CENTER);
-  }, []);
+  const initializeLocation = async () => {
+    try {
+      const position = await getCurrentPosition();
+
+      const coordinates = [
+        position.lat,
+        position.lng,
+      ];
+
+      setUserLocation(coordinates);
+      setLocationLabel("");
+
+      await loadNearbyPlaces(coordinates);
+
+    } catch (error) {
+      console.error("Location error:", error.message);
+
+      // Fallback to default Dhaka location
+      await loadNearbyPlaces(DEFAULT_CENTER);
+    }
+  };
+
+  initializeLocation();
+}, []);
 
   const filteredPlaces = useMemo(() => {
     const distanceOrigin = userLocation || (locationLabel ? mapCenter : null);
