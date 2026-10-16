@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  loadCachedSafePlaces,
+  saveCachedSafePlaces,
+} from "../services/safePlacesCache";
+import {
   ArrowLeft,
   Building2,
   Crosshair,
@@ -21,6 +25,7 @@ import {
 import useGeolocation from "../hooks/useGeolocation";
 
 const DEFAULT_CENTER = [23.8103, 90.4125];
+
 const FILTERS = [
   { id: "all", label: "All places" },
   { id: "police", label: "Police" },
@@ -33,10 +38,10 @@ const FILTERS = [
 const getCoordinates = (place) => {
   const geoCoordinates = place.geo?.coordinates || place.coordinates;
   const latitude = Number(
-    place.latitude ?? place.lat ?? (geoCoordinates && geoCoordinates[1]),
+    place.latitude ?? place.lat ?? (geoCoordinates && geoCoordinates[1])
   );
   const longitude = Number(
-    place.longitude ?? place.lng ?? (geoCoordinates && geoCoordinates[0]),
+    place.longitude ?? place.lng ?? (geoCoordinates && geoCoordinates[0])
   );
 
   if (
@@ -95,7 +100,7 @@ const getDirectionsUrl = (place) => {
     ? `${place.coordinates[0]},${place.coordinates[1]}`
     : [place.name, place.address].filter(Boolean).join(", ");
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-    destination,
+    destination
   )}`;
 };
 
@@ -134,7 +139,9 @@ const markerIcons = {
 const createMarkerIcon = (category) =>
   L.divIcon({
     className: "safe-place-marker-wrap",
-    html: `<span class="safe-place-marker safe-place-marker-${category}"><i>${markerIcons[category]}</i></span>`,
+    html: `<span class="safe-place-marker safe-place-marker-${category}"><i>${
+      markerIcons[category] || "?"
+    }</i></span>`,
     iconSize: [38, 46],
     iconAnchor: [19, 44],
     popupAnchor: [0, -42],
@@ -151,20 +158,35 @@ export default function SafePlaces() {
   const [locationLabel, setLocationLabel] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const { getCurrentPosition, loading: locating, error: locationError } =
-    useGeolocation();
+  const {
+    getCurrentPosition,
+    loading: locating,
+    error: locationError,
+  } = useGeolocation();
 
   const loadNearbyPlaces = async (coordinates) => {
     setLoading(true);
     setLoadError("");
     setSelectedId(null);
 
+    // Offline cache first (T-10.2 / T-10.3)
+    const cached = loadCachedSafePlaces();
+    if (cached?.length) {
+      setPlaces(cached.map(normalizePlace).filter(Boolean));
+    }
+
     try {
       const nearbyPlaces = await getNearbySafePlaces(coordinates);
-      setPlaces(nearbyPlaces.map(normalizePlace).filter(Boolean));
+      const normalized = nearbyPlaces.map(normalizePlace).filter(Boolean);
+
+      setPlaces(normalized);
       setMapCenter(coordinates);
+      saveCachedSafePlaces(normalized);
+      setLoadError("");
     } catch (error) {
-      setLoadError(error.message || "Unable to load nearby safe places.");
+      if (!cached?.length) {
+        setLoadError(error.message || "Unable to load nearby safe places.");
+      }
     } finally {
       setLoading(false);
     }
@@ -178,16 +200,16 @@ export default function SafePlaces() {
     const distanceOrigin = userLocation || (locationLabel ? mapCenter : null);
     return places
       .filter(
-        (place) => activeFilter === "all" || place.category === activeFilter,
+        (place) => activeFilter === "all" || place.category === activeFilter
       )
       .sort((first, second) => {
         const firstDistance = getDistanceKm(
           distanceOrigin,
-          first.coordinates,
+          first.coordinates
         );
         const secondDistance = getDistanceKm(
           distanceOrigin,
-          second.coordinates,
+          second.coordinates
         );
         if (firstDistance === null) return 1;
         if (secondDistance === null) return -1;
@@ -223,7 +245,10 @@ export default function SafePlaces() {
   const locateMe = async () => {
     try {
       const position = await getCurrentPosition();
-      const coordinates = [position.lat, position.lng];
+      const coordinates = [
+        position.lat ?? position.latitude,
+        position.lng ?? position.longitude,
+      ];
       setLocationLabel("");
       setUserLocation(coordinates);
       await loadNearbyPlaces(coordinates);
@@ -235,11 +260,7 @@ export default function SafePlaces() {
   return (
     <main className="safe-directory">
       <header className="safe-directory-header">
-        <Link
-          className="safe-back"
-          to="/"
-          aria-label="Back to home"
-        >
+        <Link className="safe-back" to="/" aria-label="Back to home">
           <ArrowLeft size={21} />
         </Link>
         <div>
@@ -293,8 +314,11 @@ export default function SafePlaces() {
           <Crosshair size={20} />
         </button>
       </form>
+
       {locationLabel && (
-        <p className="safe-location-label">Showing places near {locationLabel}</p>
+        <p className="safe-location-label">
+          Showing places near {locationLabel}
+        </p>
       )}
       {(loadError || locationError) && (
         <p className="safe-inline-error">{loadError || locationError}</p>
@@ -322,12 +346,15 @@ export default function SafePlaces() {
               {loading
                 ? "Searching nearby places..."
                 : mapPlaces.length
-                ? `${mapPlaces.length} place${mapPlaces.length === 1 ? "" : "s"} shown`
-                : "No places with map coordinates found nearby"}
+                  ? `${mapPlaces.length} place${
+                      mapPlaces.length === 1 ? "" : "s"
+                    } shown`
+                  : "No places with map coordinates found nearby"}
             </span>
           </div>
           <MapPin size={20} aria-hidden="true" />
         </div>
+
         <MapContainer
           center={center}
           zoom={13}
@@ -382,7 +409,9 @@ export default function SafePlaces() {
             <span>
               {loading
                 ? "Loading places..."
-                : `${filteredPlaces.length} place${filteredPlaces.length === 1 ? "" : "s"}`}
+                : `${filteredPlaces.length} place${
+                    filteredPlaces.length === 1 ? "" : "s"
+                  }`}
             </span>
           </div>
         </div>
@@ -399,7 +428,7 @@ export default function SafePlaces() {
           <div className="safe-empty" role="status">
             <MapPin size={24} />
             <strong>No places found</strong>
-          <p>Try another area or choose a different category.</p>
+            <p>Try another area or choose a different category.</p>
           </div>
         )}
 
@@ -407,7 +436,7 @@ export default function SafePlaces() {
           {filteredPlaces.map((place) => {
             const distance = getDistanceKm(
               userLocation || (locationLabel ? mapCenter : null),
-              place.coordinates,
+              place.coordinates
             );
             const PlaceIcon =
               place.category === "hospital"
@@ -430,9 +459,7 @@ export default function SafePlaces() {
                   <PlaceIcon size={21} aria-hidden="true" />
                 </div>
                 <div className="safe-place-info">
-                  <span className="safe-place-category">
-                    {place.category}
-                  </span>
+                  <span className="safe-place-category">{place.category}</span>
                   <h3>{place.name}</h3>
                   {place.address && <p>{place.address}</p>}
                   {distance !== null && (
@@ -455,7 +482,8 @@ export default function SafePlaces() {
           })}
         </div>
       </section>
+
       <div className="safe-directory-bottom-space" />
     </main>
   );
-}
+} 
