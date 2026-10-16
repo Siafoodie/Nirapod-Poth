@@ -176,9 +176,21 @@ const ReportForm = () => {
                 title="Use current location as incident location"
               >
                 {loadingGps ? "⌛ Fetching..." : "📍 GPS"}
-              </button>
-            </div>
-          </div>
+            </button>
+</div>
+
+<p style={styles.helperText}>
+  🔒 Anonymous Report: Your name, email, phone number,
+  and travel history will not be attached to this report.
+  GPS location is optional. If you use GPS, your
+  coordinates will be included in the report.
+  Please avoid including personal information
+  in the description.
+</p>
+
+</div>
+
+{/* DESCRIPTION */}
 
           {/* DESCRIPTION */}
           <div style={styles.fieldGroup}>

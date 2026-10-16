@@ -33,7 +33,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Logging
-app.use(morgan("dev"));
+// Privacy-safe HTTP logging
+// Log only method, route path, status and response time.
+// Avoid query parameters and request bodies.
+
+morgan.token("safe-path", (req) => {
+  return req.path;
+});
+
+app.use(
+  morgan(":method :safe-path :status :response-time ms")
+);
 
 // Static profile uploads
 app.use(

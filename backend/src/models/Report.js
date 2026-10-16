@@ -70,6 +70,7 @@ const geoSchema = new mongoose.Schema(
 
 const reportSchema = new mongoose.Schema(
   {
+    
     incidentType: {
       type: String,
       required: true,
@@ -134,8 +135,19 @@ const reportSchema = new mongoose.Schema(
   }
 );
 
+// Geospatial index for nearby reports
 reportSchema.index({ geo: "2dsphere" });
 
-const Report = mongoose.models.Report || mongoose.model("Report", reportSchema);
+// Automatically delete reports 90 days after creation
+reportSchema.index(
+  { createdAt: 1 },
+  {
+    expireAfterSeconds: 90 * 24 * 60 * 60,
+    name: "report_retention_90_days",
+  }
+);
+
+const Report =
+  mongoose.models.Report || mongoose.model("Report", reportSchema);
 
 module.exports = Report;
