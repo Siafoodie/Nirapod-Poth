@@ -31,7 +31,10 @@ const FILTERS = [
 ];
 
 const getCoordinates = (place) => {
-  const geoCoordinates = place.geo?.coordinates || place.coordinates;
+ const geoCoordinates =
+  place.geo?.coordinates ||
+  place.location?.coordinates ||
+  place.coordinates;
   const latitude = Number(
     place.latitude ?? place.lat ?? (geoCoordinates && geoCoordinates[1]),
   );
