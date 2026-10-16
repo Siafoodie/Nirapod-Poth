@@ -54,7 +54,8 @@ describe("T-09.1: Report voting API", () => {
       response.status,
       response.body
     );
-
+     console.log("STATUS:", response.status);
+console.log("RESPONSE:", JSON.stringify(response.body, null, 2));
     expect(response.status).toBe(200);
 
     expect(response.body.data).toMatchObject({
