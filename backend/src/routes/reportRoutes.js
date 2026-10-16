@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const Report = require("../models/Report");
 const voteRateLimiter = require("../middleware/voteRateLimiter");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -261,7 +262,7 @@ router.post("/", async (req, res) => {
     }
 
     // Only approved fields are persisted.
-    // Reporter name, email and userId are not saved.
+    // Reporter identity and travel history are not saved.
     const reportData = {
       incidentType: incidentType.trim(),
       location: location.trim(),
@@ -296,6 +297,7 @@ router.post("/", async (req, res) => {
 // POST /api/reports/:reportId/vote
 router.post(
   "/:reportId/vote",
+  protect,
   voteRateLimiter,
   async (req, res) => {
     try {
@@ -319,24 +321,10 @@ router.post(
         });
       }
 
-      const {
-        voterId,
-        vote,
-        latitude,
-        longitude,
-      } = req.body;
+      const { vote, latitude, longitude } = req.body;
 
-      if (
-        typeof voterId !== "string" ||
-        voterId.trim().length === 0 ||
-        voterId.trim().length > 128
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "voterId must be a non-empty string of at most 128 characters",
-        });
-      }
+      // Use authenticated user identity, not client-supplied voterId.
+      const normalizedVoterId = String(req.user._id);
 
       if (vote !== "upvote" && vote !== "downvote") {
         return res.status(400).json({
@@ -417,8 +405,6 @@ router.post(
             "You can only vote on reports within 5 km of your location.",
         });
       }
-
-      const normalizedVoterId = voterId.trim();
 
       // Update vote atomically.
       // Only approved reports can be modified.
