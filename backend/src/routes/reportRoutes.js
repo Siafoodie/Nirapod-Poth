@@ -149,7 +149,7 @@ router.get("/nearby", async (req, res) => {
       data: reports.map((report) => toReportResponse(report)),
     });
   } catch (error) {
-    console.error("Nearby reports error:", error.code || error.name);
+    console.error("Nearby reports error:", error);
 
     return res.status(500).json({
       success: false,
@@ -181,7 +181,7 @@ router.get("/", async (req, res) => {
       data: reports.map((report) => toReportResponse(report)),
     });
   } catch (error) {
-    console.error("Get reports error:", error.code || error.name);
+    console.error("Get reports error:", error);
 
     return res.status(500).json({
       success: false,
@@ -285,7 +285,7 @@ router.post("/", async (req, res) => {
       data: toReportResponse(report),
     });
   } catch (error) {
-    console.error("Create report error:", error.code || error.name);
+    console.error("Create report error:", error);
 
     return res.status(500).json({
       success: false,
@@ -323,7 +323,7 @@ router.post(
 
       const { vote, latitude, longitude } = req.body;
 
-      // Use authenticated user identity, not client-supplied voterId.
+      // Use authenticated user identity.
       const normalizedVoterId = String(req.user._id);
 
       if (vote !== "upvote" && vote !== "downvote") {
@@ -441,7 +441,9 @@ router.post(
             },
           },
         ],
-        { new: true }
+        
+{ new: true, updatePipeline: true }
+
       );
 
       if (!report) {
@@ -457,7 +459,9 @@ router.post(
         data: toReportResponse(report, normalizedVoterId),
       });
     } catch (error) {
-      console.error("Vote error:", error.code || error.name);
+      console.error("Vote error:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
 
       return res.status(500).json({
         success: false,
@@ -498,7 +502,7 @@ router.get("/:id/score", async (req, res) => {
       score: score.score,
     });
   } catch (error) {
-    console.error("Vote score error:", error.code || error.name);
+    console.error("Vote score error:", error);
 
     return res.status(500).json({
       success: false,

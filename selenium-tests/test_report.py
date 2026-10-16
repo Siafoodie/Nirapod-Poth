@@ -35,3 +35,11 @@ time.sleep(1)
 print("Form filled successfully")
 
 driver.quit()
+submit = driver.find_element(
+    By.XPATH,
+    "//button[contains(., 'Submit Report')]"
+)
+
+submit.click()
+
+time.sleep(2)
