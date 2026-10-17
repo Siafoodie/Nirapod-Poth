@@ -27,7 +27,7 @@ export default function Navbar() {
 
   return (
     <nav style={styles.navbar}>
-      <NavLink to="/home" style={styles.logo}>
+      <NavLink to="/home" style={styles.logo}> 
         Nirapod Poth
       </NavLink>
 
@@ -64,7 +64,7 @@ export default function Navbar() {
 
 const styles = {
   navbar: {
-    backgroundColor: "#123c34",
+    backgroundColor: "#5026bb",
     padding: "14px 24px",
     display: "flex",
     justifyContent: "space-between",
@@ -80,7 +80,7 @@ const styles = {
   },
   menuButton: {
     backgroundColor: "#ffffff",
-    color: "#123c34",
+    color: "#633ba5",
     border: "none",
     borderRadius: "6px",
     padding: "10px 16px",
@@ -103,14 +103,14 @@ const styles = {
     flexDirection: "column",
   },
   link: {
-    color: "#123c34",
+    color: "#020008",
     textDecoration: "none",
     padding: "11px 14px",
     borderRadius: "5px",
     fontSize: "14px",
   },
   activeLink: {
-    backgroundColor: "#d8f3e7",
+    backgroundColor: "#a294f1",
     fontWeight: "bold",
   },
 };
