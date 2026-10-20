@@ -1,41 +1,80 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Diamond, Circle } from "lucide-react";
-import Layout from "../components/Layout";
-import { Row } from "../components/UI";
-import { API_BASE_URL, api } from "../api";
+import {
+  UserRound,
+  Mail,
+  Phone,
+  Pencil,
+  Camera,
+  Save,
+  X,
+  Info,
+  LogOut,
+  ChevronRight,
+  ShieldCheck,
+  Users,
+  PhoneCall,
+  LoaderCircle,
+} from "lucide-react";
 
+import Layout from "../components/Layout";
+import { API_BASE_URL, api } from "../api";
 import {
   getStoredUser,
   saveUser,
   clearStoredUser,
 } from "../utils/userStorage";
 
+import "./Profile.css";
+
+// Convert image path to full URL
+function imageUrl(path) {
+  if (!path) return "";
+
+  const value = String(path).trim();
+
+  if (/^(https?:\/\/|data:|blob:)/i.test(value)) {
+    return value;
+  }
+
+  const server = String(API_BASE_URL || "")
+    .replace(/\/api\/?$/, "")
+    .replace(/\/$/, "");
+
+  return `${server}/${value.replace(/^\/+/, "")}`;
+}
+
 export default function Profile() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
-  const cachedUser = getStoredUser() || {};
+  const [initialUser] = useState(
+    () => getStoredUser() || {}
+  );
 
   const [profile, setProfile] = useState({
-    name: cachedUser.name || "",
-    email: cachedUser.email || "",
-    phone: cachedUser.phone || "",
-    profileImage: cachedUser.profileImage || "",
+    name: initialUser.name || "",
+    email: initialUser.email || "",
+    phone: initialUser.phone || "",
+    profileImage: initialUser.profileImage || "",
   });
 
   const [editData, setEditData] = useState({
-    name: "",
-    phone: "",
+    name: initialUser.name || "",
+    phone: initialUser.phone || "",
   });
 
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [avatarError, setAvatarError] = useState(false);
 
+  // Update profile state
   const updateProfileState = (user) => {
     const updated = {
       name: user.name || "",
@@ -50,48 +89,53 @@ export default function Profile() {
       name: updated.name,
       phone: updated.phone,
     });
+
+    setAvatarError(false);
   };
 
-  // ==========================================
-  // LOAD USER PROFILE
-  // ==========================================
-
+  // Load profile from backend
   useEffect(() => {
+    let mounted = true;
+
     const loadProfile = async () => {
       try {
-        setLoading(true);
-        setError("");
-
         const data = await api("/profile");
 
         if (!data.user) {
-          throw new Error("Profile information unavailable.");
+          throw new Error(
+            "Profile information unavailable."
+          );
         }
 
-        updateProfileState(data.user);
-
-        // Replace old cached data with minimized data.
-        saveUser(data.user);
+        if (mounted) {
+          updateProfileState(data.user);
+          saveUser(data.user);
+        }
       } catch (err) {
         console.error("PROFILE LOAD ERROR:", err);
 
-        setError(
-          cachedUser.name || cachedUser.email
-            ? `${err.message || "Failed to load profile"}. Showing saved account information.`
-            : err.message || "Failed to load profile"
-        );
+        if (mounted) {
+          setError(
+            initialUser.name || initialUser.email
+              ? `${err.message || "Failed to load profile"}. Showing saved account information.`
+              : err.message || "Failed to load profile"
+          );
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadProfile();
-  }, []);
 
-  // ==========================================
-  // SAVE PROFILE INFORMATION
-  // ==========================================
+    return () => {
+      mounted = false;
+    };
+  }, [initialUser]);
 
+  // Save edited profile
   const handleSave = async () => {
     if (saving) return;
 
@@ -99,7 +143,7 @@ export default function Profile() {
     setMessage("");
 
     if (!editData.name.trim()) {
-      setError("Name cannot be empty");
+      setError("Name cannot be empty.");
       return;
     }
 
@@ -115,33 +159,44 @@ export default function Profile() {
       });
 
       if (!data.user) {
-        throw new Error("Invalid profile update response.");
+        throw new Error(
+          "Invalid profile update response."
+        );
       }
 
       updateProfileState(data.user);
-
-      // Store only approved user fields.
       saveUser(data.user);
 
       setEditing(false);
       setMessage("Profile updated successfully!");
     } catch (err) {
       setError(
-        err.message || "Failed to update profile"
+        err.message || "Failed to update profile."
       );
     } finally {
       setSaving(false);
     }
   };
 
-  // ==========================================
-  // UPLOAD PROFILE IMAGE
-  // ==========================================
+  // Cancel editing
+  const handleCancel = () => {
+    setEditData({
+      name: profile.name,
+      phone: profile.phone,
+    });
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
+    setEditing(false);
+    setError("");
+  };
+
+  // Upload profile picture
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
 
     if (!file) return;
+
+    setError("");
+    setMessage("");
 
     const allowedTypes = [
       "image/jpeg",
@@ -151,339 +206,333 @@ export default function Profile() {
 
     if (!allowedTypes.includes(file.type)) {
       setError(
-        "Please select a JPG, PNG or WEBP image."
+        "Please select a JPG, PNG, or WebP image."
       );
-      e.target.value = "";
+      event.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError(
-        "Profile image must be smaller than 5 MB."
-      );
-      e.target.value = "";
+      setError("Image size must be under 5 MB.");
+      event.target.value = "";
       return;
     }
 
     try {
       setUploading(true);
-      setError("");
-      setMessage("");
 
       const formData = new FormData();
-      formData.append("profileImage", file);
+      formData.append("image", file);
 
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setError("Please sign in again.");
-        navigate("/login");
-        return;
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/profile/image`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const data = await response
-        .json()
-        .catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to upload profile image"
-        );
-      }
+      const data = await api("/profile/avatar", {
+        method: "POST",
+        body: formData,
+      });
 
       if (!data.user) {
         throw new Error(
-          "Invalid profile image response."
+          "Invalid image upload response."
         );
       }
 
       updateProfileState(data.user);
-
-      // Avoid saving the entire backend user object.
       saveUser(data.user);
 
       setMessage(
-        "Profile image updated successfully!"
+        "Profile picture updated successfully!"
       );
     } catch (err) {
-      console.error("IMAGE UPLOAD ERROR:", err);
-
       setError(
-        err.message ||
-          "Failed to upload profile image"
+        err.message || "Failed to upload image."
       );
     } finally {
       setUploading(false);
-      e.target.value = "";
+      event.target.value = "";
     }
   };
 
-  // ==========================================
-  // CANCEL EDIT
-  // ==========================================
-
-  const handleCancel = () => {
-    setEditData({
-      name: profile.name || "",
-      phone: profile.phone || "",
-    });
-
-    setEditing(false);
-    setError("");
-    setMessage("");
-  };
-
-  // ==========================================
-  // LOGOUT
-  // ==========================================
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  // Sign out
+  const handleSignOut = () => {
     clearStoredUser();
-
-    navigate("/login");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/", { replace: true });
   };
 
-  // ==========================================
-  // LOADING
-  // ==========================================
-
-  if (loading) {
-    return (
-      <Layout title="Profile" back>
-        <div className="profile-loading">
-          Loading profile...
-        </div>
-      </Layout>
-    );
-  }
-
-  const profileImageUrl = profile.profileImage
-    ? `${API_BASE_URL.replace(/\/api\/?$/, "")}${profile.profileImage}`
-    : "";
+  const avatar = imageUrl(profile.profileImage);
 
   return (
-    <Layout title="Profile" back>
-      {/* PROFILE HEADER */}
+    <Layout>
+      <main className="np-profile-page">
+        <div className="np-profile-container">
 
-      <div className="profilehead">
-        <div className="profile-avatar-section">
-          <div className="avatar">
-            {profile.profileImage ? (
-              <img
-                src={profileImageUrl}
-                alt={`${profile.name || "User"} profile`}
-                className="profile-avatar-image"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+          {/* Page heading */}
+          <div className="np-profile-heading">
+            <div>
+              <span className="np-profile-eyebrow">
+                MY ACCOUNT
+              </span>
+              <h1>My Profile</h1>
+              <p>
+                Manage your personal information
+                and safety settings.
+              </p>
+            </div>
+
+            <ShieldCheck
+              size={34}
+              color="#8b50e5"
+            />
+          </div>
+
+          {/* Notifications */}
+          {error && (
+            <div
+              className="np-profile-alert error"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div
+              className="np-profile-alert success"
+              role="status"
+            >
+              {message}
+            </div>
+          )}
+
+          {/* Profile Card */}
+          <section className="np-profile-main-card">
+
+            <div className="np-profile-cover" />
+
+            <div className="np-profile-avatar-wrapper">
+              <div className="np-profile-avatar-large">
+                {avatar && !avatarError ? (
+                  <img
+                    src={avatar}
+                    alt="Profile"
+                    onError={() =>
+                      setAvatarError(true)
+                    }
+                  />
+                ) : (
+                  <UserRound size={48} />
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="np-profile-camera"
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
+                disabled={uploading}
+                title="Change profile picture"
+                aria-label="Change profile picture"
+              >
+                {uploading ? (
+                  <LoaderCircle
+                    size={19}
+                    className="np-profile-spinner"
+                  />
+                ) : (
+                  <Camera size={19} />
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                onChange={handleImageUpload}
               />
-            ) : (
-              profile.name
-                ? profile.name.charAt(0).toUpperCase()
-                : "U"
+            </div>
+
+            <div className="np-profile-identity">
+              <h2>
+                {profile.name || "Your Name"}
+              </h2>
+
+              <p>
+                {profile.email ||
+                  "No email available"}
+              </p>
+            </div>
+
+            {loading && (
+              <p className="np-profile-loading">
+                Loading profile...
+              </p>
             )}
-          </div>
 
-          <label className="change-photo-btn">
-            {uploading
-              ? "Uploading..."
-              : "Change Photo"}
+            {/* Edit Profile */}
+            <div className="np-profile-form">
 
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleImageUpload}
-              disabled={uploading}
-              hidden
-            />
-          </label>
-        </div>
+              <div className="np-profile-form-heading">
+                <h3>Personal Information</h3>
 
-        <div className="profile-heading-text">
-          <h1>{profile.name || "User"}</h1>
-          <p>Stay safe, stay confident.</p>
-        </div>
-      </div>
+                {!editing && (
+                  <button
+                    type="button"
+                    className="np-profile-edit-btn"
+                    onClick={() =>
+                      setEditing(true)
+                    }
+                  >
+                    <Pencil size={16} />
+                    Edit
+                  </button>
+                )}
+              </div>
 
-      {/* PERSONAL INFORMATION */}
+              <div className="np-profile-field">
+                <label htmlFor="np-profile-name">
+                  <UserRound size={17} />
+                  Full Name
+                </label>
 
-      <div className="profile-info">
-        <h3>Personal Information</h3>
+                <input
+                  id="np-profile-name"
+                  type="text"
+                  value={
+                    editing
+                      ? editData.name
+                      : profile.name
+                  }
+                  disabled={!editing || saving}
+                  onChange={(event) =>
+                    setEditData({
+                      ...editData,
+                      name: event.target.value,
+                    })
+                  }
+                />
+              </div>
 
-        {error && (
-          <div className="profile-error-message">
-            {error}
-          </div>
-        )}
+              <div className="np-profile-field">
+                <label htmlFor="np-profile-email">
+                  <Mail size={17} />
+                  Email Address
+                </label>
 
-        {message && (
-          <div className="profile-success-message">
-            {message}
-          </div>
-        )}
+                <input
+                  id="np-profile-email"
+                  type="email"
+                  value={profile.email}
+                  disabled
+                />
+              </div>
 
-        {/* NAME */}
+              <div className="np-profile-field">
+                <label htmlFor="np-profile-phone">
+                  <Phone size={17} />
+                  Phone Number
+                </label>
 
-        <div className="profile-field">
-          <label>Name</label>
+                <input
+                  id="np-profile-phone"
+                  type="tel"
+                  value={
+                    editing
+                      ? editData.phone
+                      : profile.phone
+                  }
+                  disabled={!editing || saving}
+                  onChange={(event) =>
+                    setEditData({
+                      ...editData,
+                      phone: event.target.value,
+                    })
+                  }
+                />
+              </div>
 
-          {editing ? (
-            <input
-              type="text"
-              value={editData.name}
-              placeholder="Enter your name"
-              onChange={(e) =>
-                setEditData((prev) => ({
-                  ...prev,
-                  name: e.target.value,
-                }))
+              {editing && (
+                <div className="np-profile-form-actions">
+                  <button
+                    type="button"
+                    className="np-profile-cancel-btn"
+                    onClick={handleCancel}
+                    disabled={saving}
+                  >
+                    <X size={17} />
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="np-profile-save-btn"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    <Save size={17} />
+                    {saving
+                      ? "Saving..."
+                      : "Save Changes"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Account Options */}
+          <section className="np-profile-options">
+            <h3>Account & Safety</h3>
+
+            <button
+              type="button"
+              className="np-profile-option"
+              onClick={() =>
+                navigate("/trusted-contact")
               }
-            />
-          ) : (
-            <p>{profile.name || "Not provided"}</p>
-          )}
-        </div>
+            >
+              <Users size={21} />
+              <span>Trusted Contacts</span>
+              <ChevronRight size={19} />
+            </button>
 
-        {/* EMAIL */}
-
-        <div className="profile-field">
-          <label>Email</label>
-
-          <p>{profile.email || "Not provided"}</p>
-        </div>
-
-        {/* PHONE */}
-
-        <div className="profile-field">
-          <label>Phone Number</label>
-
-          {editing ? (
-            <input
-              type="tel"
-              value={editData.phone}
-              placeholder="Enter phone number"
-              onChange={(e) =>
-                setEditData((prev) => ({
-                  ...prev,
-                  phone: e.target.value,
-                }))
+            <button
+              type="button"
+              className="np-profile-option"
+              onClick={() =>
+                navigate("/helplines")
               }
-            />
-          ) : (
-            <p>{profile.phone || "Not provided"}</p>
-          )}
-        </div>
+            >
+              <PhoneCall size={21} />
+              <span>Emergency Helplines</span>
+              <ChevronRight size={19} />
+            </button>
 
-        {/* EDIT / SAVE */}
+            <button
+              type="button"
+              className="np-profile-option"
+              onClick={() =>
+                navigate("/about")
+              }
+            >
+              <Info size={21} />
+              <span>About Nirapod Poth</span>
+              <ChevronRight size={19} />
+            </button>
+          </section>
 
-        {!editing ? (
+          {/* Sign Out */}
           <button
             type="button"
-            className="profile-edit-btn"
-            onClick={() => {
-              setEditData({
-                name: profile.name || "",
-                phone: profile.phone || "",
-              });
-
-              setEditing(true);
-              setMessage("");
-              setError("");
-            }}
+            className="np-profile-signout"
+            onClick={handleSignOut}
           >
-            Edit Profile
+            <LogOut size={20} />
+            Sign Out
           </button>
-        ) : (
-          <div className="profile-actions">
-            <button
-              type="button"
-              className="profile-save-btn"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
 
-            <button
-              type="button"
-              className="profile-cancel-btn"
-              onClick={handleCancel}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* SAFETY */}
-
-      <h3>Safety</h3>
-
-      <Row
-        icon={<Diamond />}
-        onClick={() => navigate("/trusted-contact")}
-      >
-        Trusted Contacts
-      </Row>
-
-      <Row icon={<Diamond />}>
-        Privacy Settings
-      </Row>
-
-      <Row icon={<Diamond />}>
-        Location Permission
-      </Row>
-
-      {/* APP */}
-
-      <h3>App</h3>
-
-      <Row
-        icon={<Circle />}
-        onClick={() => navigate("/emergency")}
-      >
-        Emergency Helplines
-      </Row>
-
-      <Row icon={<Circle />}>
-        Offline Data
-      </Row>
-
-      <Row icon={<Circle />}>
-        Language
-      </Row>
-
-      <Row icon={<Circle />}>
-        Help
-      </Row>
-
-      <Row icon={<Circle />}>
-        About Nirapod Poth
-      </Row>
-
-      {/* SIGN OUT */}
-
-      <button
-        type="button"
-        className="logout"
-        onClick={handleLogout}
-      >
-        Sign Out
-      </button>
+        </div>
+      </main>
     </Layout>
   );
 }

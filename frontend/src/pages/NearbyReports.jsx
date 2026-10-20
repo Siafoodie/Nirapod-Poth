@@ -1,39 +1,143 @@
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  AlertTriangle,
+  CheckCircle2,
+  LocateFixed,
+  MapPin,
+  RefreshCw,
+  ShieldCheck,
+  ThumbsDown,
+  ThumbsUp,
+  Users,
+  WifiOff,
+  Sparkles,
+  Info,
+  LoaderCircle,
+} from "lucide-react";
+
 import { api } from "../api";
 import { getStoredUser } from "../utils/userStorage";
+import "./NearbyReports.css";
+
+const RADIUS_KM = 5;
+
+// Calculate credibility score
+const scoreOf = (report) => {
+  return Number(
+    report.score ??
+      (Number(report.upvotes || 0) -
+        Number(report.downvotes || 0))
+  );
+};
+
+// Sort reports by credibility score
+const sortReportsByScore = (items) => {
+  return [...items].sort(
+    (a, b) => scoreOf(b) - scoreOf(a)
+  );
+};
+
+// Choose icon based on incident type
+function getIncidentIcon(type) {
+  const value = String(type || "").toLowerCase();
+
+  if (
+    value.includes("harass") ||
+    value.includes("assault") ||
+    value.includes("violence")
+  ) {
+    return <AlertTriangle size={23} />;
+  }
+
+  if (
+    value.includes("safe") ||
+    value.includes("help")
+  ) {
+    return <ShieldCheck size={23} />;
+  }
+
+  return <Info size={23} />;
+}
+
+// Handle different API response formats
+function getReportsArray(response) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.reports)) {
+    return response.reports;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.data?.reports)) {
+    return response.data.reports;
+  }
+
+  return null;
+}
 
 export default function NearbyReports() {
   const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
   const [location, setLocation] = useState(null);
   const [votingId, setVotingId] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
 
-  // Login information is only used for UI.
-  // The backend verifies the actual user using JWT.
-  const storedUser = getStoredUser();
-  const token = localStorage.getItem("token");
+  const requestRef = useRef(0);
+  const mountedRef = useRef(false);
+  const votingRef = useRef(false);
 
-  const isLoggedIn = Boolean(storedUser && token);
+  const isLoggedIn = Boolean(
+    authReady &&
+      getStoredUser() &&
+      localStorage.getItem("token")
+  );
 
-  // Sort reports by credibility score.
-  const sortReportsByScore = (reportList) => {
-    return [...reportList].sort((a, b) => {
-      const scoreA =
-        a.score ?? (a.upvotes || 0) - (a.downvotes || 0);
+  // Fetch reports from backend
+  const fetchReports = useCallback(
+    async (latitude, longitude, requestId) => {
+      const response = await api(
+        `/reports/nearby?latitude=${encodeURIComponent(
+          latitude
+        )}&longitude=${encodeURIComponent(
+          longitude
+        )}&radiusKm=${RADIUS_KM}`
+      );
 
-      const scoreB =
-        b.score ?? (b.upvotes || 0) - (b.downvotes || 0);
+      const list = getReportsArray(response);
 
-      return scoreB - scoreA;
-    });
-  };
+      if (!list) {
+        throw new Error(
+          "Nearby reports API returned an unexpected response."
+        );
+      }
 
-  // Load reports within 5 km.
-  const loadNearbyReports = () => {
+      if (
+        mountedRef.current &&
+        requestId === requestRef.current
+      ) {
+        setReports(sortReportsByScore(list));
+      }
+    },
+    []
+  );
+
+  // Get GPS location and load reports
+  const loadNearbyReports = useCallback(() => {
+    const requestId = ++requestRef.current;
+
     setError("");
+    setNotice("");
     setLoading(true);
     setLocation(null);
     setReports([]);
@@ -48,8 +152,15 @@ export default function NearbyReports() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
+        if (
+          !mountedRef.current ||
+          requestId !== requestRef.current
+        ) {
+          return;
+        }
+
+        const { latitude, longitude } =
+          position.coords;
 
         setLocation({
           latitude,
@@ -57,47 +168,73 @@ export default function NearbyReports() {
         });
 
         try {
-          const response = await api(
-            `/reports/nearby?latitude=${latitude}&longitude=${longitude}&radiusKm=5`
+          await fetchReports(
+            latitude,
+            longitude,
+            requestId
           );
-
-          const reportList = Array.isArray(response)
-            ? response
-            : Array.isArray(response?.data)
-              ? response.data
-              : [];
-
-          setReports(sortReportsByScore(reportList));
         } catch (err) {
-          setError(
-            err.message || "Unable to load nearby reports."
-          );
+          if (
+            mountedRef.current &&
+            requestId === requestRef.current
+          ) {
+            setError(
+              err.message ||
+                "Unable to load nearby reports."
+            );
+          }
         } finally {
-          setLoading(false);
+          if (
+            mountedRef.current &&
+            requestId === requestRef.current
+          ) {
+            setLoading(false);
+          }
         }
       },
-      () => {
+
+      (geoError) => {
+        if (
+          !mountedRef.current ||
+          requestId !== requestRef.current
+        ) {
+          return;
+        }
+
         setError(
-          "Unable to access your location. Please allow location permission."
+          geoError.code === 1
+            ? "Location permission denied. Please enable location access."
+            : "Unable to access your location. Please try again."
         );
+
         setLoading(false);
       },
+
       {
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 30000,
       }
     );
-  };
+  }, [fetchReports]);
 
-  // Load reports when page opens.
+  // Load reports when page opens
   useEffect(() => {
-    loadNearbyReports();
-  }, []);
+    mountedRef.current = true;
+    setAuthReady(true);
 
-  // Submit vote.
+    loadNearbyReports();
+
+    return () => {
+      mountedRef.current = false;
+      requestRef.current += 1;
+    };
+  }, [loadNearbyReports]);
+
+  // Submit upvote or downvote
   const handleVote = async (reportId, vote) => {
     setError("");
+    setNotice("");
 
     if (!isLoggedIn) {
       setError("Please sign in before voting.");
@@ -106,7 +243,7 @@ export default function NearbyReports() {
 
     if (!navigator.onLine) {
       setError(
-        "You are offline. Your vote was not submitted. Please reconnect and try again."
+        "You are offline. Please reconnect and try again."
       );
       return;
     }
@@ -118,312 +255,356 @@ export default function NearbyReports() {
       return;
     }
 
-    if (votingId !== null) return;
+    if (votingRef.current) {
+      return;
+    }
 
+    votingRef.current = true;
     setVotingId(reportId);
 
     try {
-      const response = await api(
-        `/reports/${reportId}/vote`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            vote,
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }),
-        }
+      await api(`/reports/${reportId}/vote`, {
+        method: "POST",
+        body: JSON.stringify({
+          vote,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }),
+      });
+
+      // Reload from backend to get actual vote totals
+      const requestId = requestRef.current;
+
+      await fetchReports(
+        location.latitude,
+        location.longitude,
+        requestId
       );
 
-      const updatedReport = response?.data;
-
-      if (!updatedReport) {
-        throw new Error("Invalid vote response from server.");
-      }
-
-      setReports((currentReports) => {
-        const updatedReports = currentReports.map(
-          (report) =>
-            report._id === reportId
-              ? {
-                  ...report,
-                  upvotes: updatedReport.upvotes,
-                  downvotes: updatedReport.downvotes,
-                  score: updatedReport.score,
-                  userVote: updatedReport.userVote,
-                }
-              : report
-        );
-
-        return sortReportsByScore(updatedReports);
-      });
+      setNotice(
+        vote === "upvote"
+          ? "Your upvote was submitted successfully."
+          : "Your downvote was submitted successfully."
+      );
     } catch (err) {
       setError(
         err.message ||
-          "Unable to submit your vote. Please check your connection."
+          "Unable to submit your vote."
       );
     } finally {
-      setVotingId(null);
+      votingRef.current = false;
+
+      if (mountedRef.current) {
+        setVotingId(null);
+      }
     }
   };
 
   return (
-    <main
-      style={{
-        maxWidth: "800px",
-        margin: "0 auto",
-        padding: "30px 20px",
-      }}
-    >
-      {/* BACK BUTTON */}
-      <Link to="/">← Back to Home</Link>
+    <main className="nr-page">
+      <div className="nr-container">
 
-      {/* HEADER */}
-      <h1 style={{ marginTop: "25px" }}>
-        Nearby Incident Reports
-      </h1>
+        {/* Back to Home */}
+        <Link to="/home" className="nr-back-link">
+          <ArrowLeft size={18} />
+          Back to Home
+        </Link>
 
-      <p style={{ color: "#666" }}>
-        View incidents reported near your current
-        location and vote on their reliability.
-      </p>
+        {/* Hero Section */}
+        <section className="nr-hero">
+          <div className="nr-hero-content">
+            <div className="nr-hero-label">
+              <Sparkles size={17} />
+              COMMUNITY SAFETY NETWORK
+            </div>
 
-      {/* LOGIN INFORMATION */}
-      {!isLoggedIn && (
-        <div
-          style={{
-            background: "#fff7ed",
-            color: "#9a3412",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "15px",
-          }}
-        >
-          Please sign in to vote on incident reports.
-        </div>
-      )}
+            <h1>Nearby Incident Reports</h1>
 
-      {/* LOCATION INFORMATION */}
-      {location && (
-        <p
-          style={{
-            fontSize: "14px",
-            color: "#666",
-          }}
-        >
-          Showing reports within 5 km of your current
-          location.
-        </p>
-      )}
+            <p>
+              Stay informed about incidents around
+              your current location and help build
+              a safer community through reliable
+              reporting.
+            </p>
 
-      {/* RANKING INFORMATION */}
-      {reports.length > 0 && (
-        <p
-          style={{
-            fontSize: "14px",
-            color: "#555",
-            fontWeight: "bold",
-          }}
-        >
-          Ranked by community credibility score —
-          highest first.
-        </p>
-      )}
+            <div className="nr-hero-stats">
+              <div className="nr-stat">
+                <LocateFixed size={22} />
 
-      {/* REFRESH BUTTON */}
-      <button
-        type="button"
-        onClick={loadNearbyReports}
-        disabled={loading}
-        style={{
-          padding: "10px 16px",
-          marginBottom: "20px",
-          cursor: loading ? "not-allowed" : "pointer",
-        }}
-      >
-        {loading ? "Loading..." : "Refresh Nearby Reports"}
-      </button>
+                <div>
+                  <strong>{RADIUS_KM} km</strong>
+                  <span>Search Radius</span>
+                </div>
+              </div>
 
-      {/* ERROR MESSAGE */}
-      {error && (
-        <div
-          role="alert"
-          style={{
-            background: "#fee2e2",
-            color: "#991b1b",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "20px",
-          }}
-        >
-          {error}
-        </div>
-      )}
+              <div className="nr-stat">
+                <Users size={22} />
 
-      {/* NO REPORTS */}
-      {!loading && !error && reports.length === 0 && (
-        <div
-          style={{
-            padding: "20px",
-            background: "#f8fafc",
-            borderRadius: "10px",
-          }}
-        >
-          No nearby incident reports found.
-        </div>
-      )}
+                <div>
+                  <strong>{reports.length}</strong>
+                  <span>Nearby Reports</span>
+                </div>
+              </div>
 
-      {/* REPORT LIST */}
-      {reports.map((report, index) => (
-        <article
-          key={report._id}
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "20px",
-            marginBottom: "18px",
-            background: "#fff",
-          }}
-        >
-          {/* CREDIBILITY RANK */}
-          <p
-            style={{
-              marginTop: 0,
-              marginBottom: "8px",
-              fontSize: "13px",
-              color: "#666",
-            }}
-          >
-            Credibility Rank #{index + 1}
-          </p>
+              <div className="nr-stat">
+                <ShieldCheck size={22} />
 
-          {/* INCIDENT TYPE */}
-          <h2 style={{ marginTop: 0 }}>
-            {report.incidentType}
-          </h2>
+                <div>
+                  <strong>Community</strong>
+                  <span>Credibility Ranking</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          {/* LOCATION */}
-          <p>
-            <strong>Location:</strong>{" "}
-            {report.location}
-          </p>
+        {/* Section Header */}
+        <section className="nr-section">
+          <div className="nr-section-header">
+            <div>
+              <div className="nr-section-eyebrow">
+                <MapPin size={16} />
+                YOUR SURROUNDINGS
+              </div>
 
-          {/* DESCRIPTION */}
-          <p>{report.description}</p>
+              <h2>Community Reports</h2>
 
-          {/* VOTING SECTION */}
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginTop: "18px",
-            }}
-          >
-            {/* UPVOTE */}
+              <p>
+                Reports are ranked by community
+                credibility score, highest first.
+              </p>
+            </div>
+
             <button
               type="button"
-              disabled={votingId !== null || !isLoggedIn}
-              onClick={() =>
-                handleVote(report._id, "upvote")
-              }
-              style={{
-                padding: "9px 14px",
-                cursor:
-                  votingId !== null || !isLoggedIn
-                    ? "not-allowed"
-                    : "pointer",
-                fontWeight:
-                  report.userVote === "upvote"
-                    ? "bold"
-                    : "normal",
-                backgroundColor:
-                  report.userVote === "upvote"
-                    ? "#dcfce7"
-                    : "#ffffff",
-                border:
-                  report.userVote === "upvote"
-                    ? "2px solid #16a34a"
-                    : "1px solid #aaa",
-                borderRadius: "6px",
-              }}
+              className="nr-refresh-btn"
+              onClick={loadNearbyReports}
+              disabled={loading || votingId !== null}
             >
-              👍 Upvote ({report.upvotes || 0})
+              <RefreshCw
+                size={17}
+                className={
+                  loading ? "nr-spinning" : ""
+                }
+              />
+              {loading ? "Refreshing..." : "Refresh"}
             </button>
-
-            {/* DOWNVOTE */}
-            <button
-              type="button"
-              disabled={votingId !== null || !isLoggedIn}
-              onClick={() =>
-                handleVote(report._id, "downvote")
-              }
-              style={{
-                padding: "9px 14px",
-                cursor:
-                  votingId !== null || !isLoggedIn
-                    ? "not-allowed"
-                    : "pointer",
-                fontWeight:
-                  report.userVote === "downvote"
-                    ? "bold"
-                    : "normal",
-                backgroundColor:
-                  report.userVote === "downvote"
-                    ? "#fee2e2"
-                    : "#ffffff",
-                border:
-                  report.userVote === "downvote"
-                    ? "2px solid #dc2626"
-                    : "1px solid #aaa",
-                borderRadius: "6px",
-              }}
-            >
-              👎 Downvote ({report.downvotes || 0})
-            </button>
-
-            {/* SCORE */}
-            <strong>
-              Score:{" "}
-              {report.score ??
-                (report.upvotes || 0) -
-                  (report.downvotes || 0)}
-            </strong>
           </div>
 
-          {/* CURRENT USER VOTE */}
-          {report.userVote && (
-            <p
-              style={{
-                marginBottom: 0,
-                fontSize: "14px",
-                color: "#555",
-              }}
+          {/* Error Message */}
+          {error && (
+            <div
+              className="nr-alert nr-error"
+              role="alert"
             >
-              Your vote:{" "}
-              <strong>
-                {report.userVote === "upvote"
-                  ? "Upvote"
-                  : "Downvote"}
-              </strong>
-            </p>
+              <AlertTriangle size={20} />
+              <span>{error}</span>
+            </div>
           )}
 
-          {/* VOTE LOADING */}
-          {votingId === report._id && (
-            <p
-              style={{
-                fontSize: "13px",
-                color: "#666",
-                marginBottom: 0,
-              }}
+          {/* Success Message */}
+          {notice && (
+            <div
+              className="nr-alert nr-success"
+              role="status"
             >
-              Submitting vote...
-            </p>
+              <CheckCircle2 size={20} />
+              <span>{notice}</span>
+            </div>
           )}
-        </article>
-      ))}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="nr-state-card">
+              <LoaderCircle
+                size={35}
+                className="nr-spinning"
+              />
+
+              <h3>Finding nearby reports...</h3>
+
+              <p>
+                Checking your location and
+                loading community reports.
+              </p>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading &&
+            !error &&
+            reports.length === 0 && (
+              <div className="nr-state-card">
+                <ShieldCheck size={42} />
+
+                <h3>No nearby reports found</h3>
+
+                <p>
+                  There are currently no reported
+                  incidents within {RADIUS_KM} km
+                  of your location.
+                </p>
+              </div>
+            )}
+
+          {/* Reports List */}
+          {!loading && reports.length > 0 && (
+            <div className="nr-report-list">
+              {reports.map((report, index) => {
+                const reportId =
+                  report._id || report.id;
+
+                const upvotes = Number(
+                  report.upvotes || 0
+                );
+
+                const downvotes = Number(
+                  report.downvotes || 0
+                );
+
+                const score = scoreOf(report);
+
+                const incidentType =
+                  report.incidentType ||
+                  report.type ||
+                  "Incident Report";
+
+                const reportLocation =
+                  report.location || "Unknown location";
+
+                const userVote =
+                  report.userVote || null;
+
+                const isVoting =
+                  votingId === reportId;
+
+                return (
+                  <article
+                    key={reportId || index}
+                    className="nr-report-card"
+                  >
+                    {/* Card Header */}
+                    <div className="nr-card-top">
+                      <div className="nr-incident-icon">
+                        {getIncidentIcon(
+                          incidentType
+                        )}
+                      </div>
+
+                      <div className="nr-rank-badge">
+                        <ShieldCheck size={14} />
+                        RANK #{index + 1}
+                      </div>
+                    </div>
+
+                    {/* Incident Information */}
+                    <h3>{incidentType}</h3>
+
+                    <div className="nr-location">
+                      <MapPin size={17} />
+                      <span>{reportLocation}</span>
+                    </div>
+
+                    {report.description && (
+                      <p className="nr-description">
+                        {report.description}
+                      </p>
+                    )}
+
+                    {/* Voting Section */}
+                    <div className="nr-vote-section">
+                      <div className="nr-vote-buttons">
+                        <button
+                          type="button"
+                          className={`nr-vote-btn nr-upvote ${
+                            userVote === "upvote"
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            handleVote(
+                              reportId,
+                              "upvote"
+                            )
+                          }
+                          disabled={
+                            votingId !== null ||
+                            !reportId
+                          }
+                          aria-pressed={
+                            userVote === "upvote"
+                          }
+                        >
+                          <ThumbsUp size={17} />
+
+                          <span>
+                            Upvote ({upvotes})
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`nr-vote-btn nr-downvote ${
+                            userVote === "downvote"
+                              ? "selected"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            handleVote(
+                              reportId,
+                              "downvote"
+                            )
+                          }
+                          disabled={
+                            votingId !== null ||
+                            !reportId
+                          }
+                          aria-pressed={
+                            userVote === "downvote"
+                          }
+                        >
+                          <ThumbsDown size={17} />
+
+                          <span>
+                            Downvote ({downvotes})
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="nr-score">
+                        <span>Credibility Score</span>
+                        <strong>{score}</strong>
+                      </div>
+                    </div>
+
+                    {isVoting && (
+                      <div className="nr-voting-status">
+                        <LoaderCircle
+                          size={15}
+                          className="nr-spinning"
+                        />
+                        Submitting your vote...
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Footer Information */}
+          <div className="nr-info-footer">
+            <Info size={18} />
+
+            <p>
+              Community votes indicate report
+              credibility, not official verification.
+              Please contact emergency services
+              if you are in immediate danger.
+            </p>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

@@ -1,116 +1,544 @@
 
-import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Link,
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
-const navigationLinks = [
-  { label: "Home", path: "/home" },
-  { label: "Emergency", path: "/emergency" },
-  { label: "Emergency SOS", path: "/emergency-sos" },
-  { label: "I'm Safe", path: "/imsafe" },
-  { label: "Report Incident", path: "/report" },
-  { label: "Nearby Reports", path: "/nearby-reports" },
-  { label: "Safe Places", path: "/safe-places" },
-  { label: "Route Safety", path: "/route-safety" },
-  { label: "Trusted Contacts", path: "/trusted-contact" },
-  { label: "Profile", path: "/profile" },
-  { label: "Helplines", path: "/helplines" },
+import {
+  Menu,
+  X,
+  House,
+  Siren,
+  ShieldCheck,
+  FileWarning,
+  MapPin,
+  Map,
+  Route,
+  Users,
+  UserRound,
+  PhoneCall,
+  ChevronRight,
+  Sparkles,
+  LogOut,
+} from "lucide-react";
+
+import { clearStoredUser } from "../utils/userStorage";
+import { API_BASE_URL } from "../api";
+import "./Navbar.css";
+
+// ==========================================
+// GET CURRENT USER
+// ==========================================
+
+function getCurrentUser() {
+  try {
+    const storedUser = localStorage.getItem("user");
+
+    return storedUser
+      ? JSON.parse(storedUser)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// ==========================================
+// PROFILE IMAGE URL
+// ==========================================
+
+function getProfileImageUrl(path) {
+  if (!path) return "";
+
+  if (/^(https?:\/\/|data:|blob:)/i.test(path)) {
+    return path;
+  }
+
+  const server = String(API_BASE_URL || "")
+    .replace(/\/api\/?$/, "")
+    .replace(/\/$/, "");
+
+  return `${server}/${String(path).replace(/^\/+/, "")}`;
+}
+
+// ==========================================
+// NAVIGATION ITEMS
+// ==========================================
+
+const menuItems = [
+  {
+    label: "Home",
+    path: "/home",
+    icon: House,
+  },
+  {
+    label: "Emergency SOS",
+    path: "/emergency-sos",
+    icon: Siren,
+  },
+  {
+    label: "I'm Safe",
+    path: "/imsafe",
+    icon: ShieldCheck,
+  },
+  {
+    label: "Report Incident",
+    path: "/report",
+    icon: FileWarning,
+  },
+  {
+    label: "Nearby Reports",
+    path: "/nearby-reports",
+    icon: MapPin,
+  },
+  {
+    label: "Safe Places",
+    path: "/safe-places",
+    icon: Map,
+  },
+  {
+    label: "Route Safety",
+    path: "/route-safety",
+    icon: Route,
+  },
+  {
+    label: "Trusted Contacts",
+    path: "/trusted-contact",
+    icon: Users,
+  },
+  {
+    label: "Helplines",
+    path: "/helplines",
+    icon: PhoneCall,
+  },
 ];
+
+// ==========================================
+// NAVBAR COMPONENT
+// ==========================================
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState(
+    getCurrentUser
+  );
+
+  const [avatarFailed, setAvatarFailed] =
+    useState(false);
+
+  const navigate = useNavigate();
   const location = useLocation();
 
-  // Hide the navigation menu on authentication pages.
-  if (["/auth", "/login", "/register"].includes(location.pathname)) {
-    return null;
-  }
+  const toggleRef = useRef(null);
+  const panelRef = useRef(null);
+
+  // ========================================
+  // USER INFORMATION
+  // ========================================
+
+  const displayName =
+    currentUser?.name ||
+    currentUser?.username ||
+    "My Profile";
+
+  const profileImage =
+    currentUser?.avatarUrl ||
+    currentUser?.avatar ||
+    currentUser?.profileImage ||
+    null;
+
+  const avatarUrl = getProfileImageUrl(profileImage);
+
+  // ========================================
+  // SYNC USER INFORMATION
+  // ========================================
+
+  useEffect(() => {
+    const syncUser = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
+    window.addEventListener("storage", syncUser);
+    window.addEventListener("focus", syncUser);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("focus", syncUser);
+    };
+  }, []);
+
+  // ========================================
+  // RESET AVATAR ERROR
+  // ========================================
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarUrl]);
+
+  // ========================================
+  // CLOSE SIDEBAR ON ROUTE CHANGE
+  // ========================================
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setCurrentUser(getCurrentUser());
+  }, [location.pathname]);
+
+  // ========================================
+  // CLOSE SIDEBAR WITH ESCAPE
+  // ========================================
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [menuOpen]);
+
+  // ========================================
+  // FOCUS PROFILE WHEN SIDEBAR OPENS
+  // ========================================
+
+  useEffect(() => {
+    if (menuOpen) {
+      panelRef.current
+        ?.querySelector("a")
+        ?.focus();
+    }
+  }, [menuOpen]);
+
+  // ========================================
+  // SIGN OUT FUNCTION
+  // ========================================
+
+  const handleSignOut = () => {
+    try {
+      // Clear stored authentication data
+      clearStoredUser();
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Reset local user state
+      setCurrentUser(null);
+      setAvatarFailed(false);
+
+      // Close navigation sidebar
+      setMenuOpen(false);
+
+      // Redirect to Welcome / Intro page
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
+
+  // ========================================
+  // CLOSE SIDEBAR
+  // ========================================
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+    toggleRef.current?.focus();
+  };
 
   return (
-    <nav style={styles.navbar}>
-      <NavLink to="/home" style={styles.logo}> 
-        Nirapod Poth
-      </NavLink>
+    <>
+      {/* ====================================
+          MAIN NAVBAR HEADER
+      ==================================== */}
 
-      <button
-        type="button"
-        onClick={() => setMenuOpen(!menuOpen)}
-        style={styles.menuButton}
-        aria-expanded={menuOpen}
-        aria-label="Toggle navigation menu"
-      >
-        {menuOpen ? "Close Menu" : "☰ Menu"}
-      </button>
+      <header className="np-nav-header">
+
+        {/* LOGO AND BRAND */}
+
+        <Link
+          to="/home"
+          className="np-nav-brand"
+        >
+          <img
+            src="/nirapod-logo.png"
+            alt="Nirapod Poth Logo"
+          />
+
+          <div className="np-nav-brand-text">
+            <strong>
+              NIRAPOD <span>POTH</span>
+            </strong>
+
+            <small>
+              Your Safety Companion
+            </small>
+          </div>
+        </Link>
+
+        {/* MENU BUTTON */}
+
+        <button
+          ref={toggleRef}
+          type="button"
+          className={`np-nav-toggle ${
+            menuOpen ? "open" : ""
+          }`}
+          aria-label={
+            menuOpen
+              ? "Close menu"
+              : "Open menu"
+          }
+          aria-expanded={menuOpen}
+          aria-controls="np-sidebar"
+          onClick={() => {
+            setMenuOpen((previous) => !previous);
+          }}
+        >
+          {menuOpen ? (
+            <X size={21} />
+          ) : (
+            <Menu size={21} />
+          )}
+
+          <span>
+            {menuOpen
+              ? "Close Menu"
+              : "Explore Menu"}
+          </span>
+        </button>
+
+      </header>
+
+      {/* ====================================
+          BACKDROP
+      ==================================== */}
 
       {menuOpen && (
-        <div style={styles.menu}>
-          {navigationLinks.map((link) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              onClick={() => setMenuOpen(false)}
-              style={({ isActive }) => ({
-                ...styles.link,
-                ...(isActive ? styles.activeLink : {}),
-              })}
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </div>
+        <button
+          className="np-nav-backdrop"
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={closeMenu}
+        />
       )}
-    </nav>
+
+      {/* ====================================
+          SIDEBAR
+      ==================================== */}
+
+      <aside
+        ref={panelRef}
+        id="np-sidebar"
+        className={`np-nav-sidebar ${
+          menuOpen ? "show" : ""
+        }`}
+        aria-label="Main navigation"
+        aria-hidden={!menuOpen}
+        inert={!menuOpen}
+      >
+
+        {/* ==================================
+            SIDEBAR HEADER
+        ================================== */}
+
+        <div className="np-nav-sidebar-top">
+
+          <div className="np-nav-sidebar-title">
+            <Sparkles size={16} />
+
+            <span>
+              MY NIRAPOD POTH
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="np-nav-close"
+            aria-label="Close sidebar"
+            onClick={closeMenu}
+          >
+            <X size={18} />
+          </button>
+
+        </div>
+
+        {/* ==================================
+            PROFILE CARD
+        ================================== */}
+
+        <Link
+          to="/profile"
+          className="np-profile-card"
+          onClick={() => setMenuOpen(false)}
+        >
+
+          {/* PROFILE AVATAR */}
+
+          <div className="np-profile-avatar">
+
+            {avatarUrl && !avatarFailed ? (
+              <img
+                src={avatarUrl}
+                alt={`${displayName} profile`}
+                onError={() =>
+                  setAvatarFailed(true)
+                }
+              />
+            ) : (
+              <UserRound
+                size={27}
+                className="np-profile-fallback"
+              />
+            )}
+
+          </div>
+
+          {/* PROFILE INFORMATION */}
+
+          <div className="np-profile-details">
+
+            <strong>
+              {displayName}
+            </strong>
+
+            <span>
+              Personal Account
+            </span>
+
+            <small>
+              View Profile
+              <ChevronRight size={13} />
+            </small>
+
+          </div>
+
+          <ChevronRight
+            className="np-profile-right-arrow"
+            size={19}
+          />
+
+        </Link>
+
+        {/* ==================================
+            QUICK NAVIGATION LABEL
+        ================================== */}
+
+        <div className="np-menu-section-label">
+          QUICK NAVIGATION
+        </div>
+
+        {/* ==================================
+            NAVIGATION LINKS
+        ================================== */}
+
+        <nav className="np-nav-list">
+
+          {menuItems.map(
+            ({ label, path, icon: Icon }) => (
+
+              <NavLink
+                key={path}
+                to={path}
+                onClick={() =>
+                  setMenuOpen(false)
+                }
+                className={({ isActive }) =>
+                  `np-nav-link ${
+                    isActive ? "active" : ""
+                  }`
+                }
+              >
+
+                <span className="np-nav-link-icon">
+                  <Icon
+                    size={19}
+                    strokeWidth={1.9}
+                  />
+                </span>
+
+                <span className="np-nav-link-label">
+                  {label}
+                </span>
+
+                <ChevronRight
+                  size={16}
+                  className="np-nav-arrow"
+                />
+
+              </NavLink>
+
+            )
+          )}
+
+        </nav>
+
+        {/* ==================================
+            SIGN OUT + FOOTER
+        ================================== */}
+
+        <div className="np-nav-sidebar-bottom">
+
+          {/* SIGN OUT BUTTON */}
+
+          <button
+            type="button"
+            className="np-nav-signout"
+            onClick={handleSignOut}
+          >
+
+            <span className="np-nav-signout-left">
+
+              <LogOut size={20} />
+
+              <span>
+                Sign Out
+              </span>
+
+            </span>
+
+            <ChevronRight size={17} />
+
+          </button>
+
+          {/* FOOTER */}
+
+          <div className="np-nav-sidebar-footer">
+
+            <ShieldCheck size={22} />
+
+            <div>
+
+              <strong>
+                Stay aware. Stay connected.
+              </strong>
+
+              <small>
+                Your journey matters 💜
+              </small>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </aside>
+    </>
   );
 }
-
-const styles = {
-  navbar: {
-    backgroundColor: "#5026bb",
-    padding: "14px 24px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    position: "relative",
-    zIndex: 1000,
-  },
-  logo: {
-    color: "#ffffff",
-    textDecoration: "none",
-    fontSize: "22px",
-    fontWeight: "bold",
-  },
-  menuButton: {
-    backgroundColor: "#ffffff",
-    color: "#633ba5",
-    border: "none",
-    borderRadius: "6px",
-    padding: "10px 16px",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  
-  menu: {
-    position: "absolute",
-    top: "100%",
-    right: "16px",
-    width: "230px",
-    maxHeight: "75vh",
-    overflowY: "auto",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
-    borderRadius: "8px",
-    padding: "10px",
-    display: "flex",
-    flexDirection: "column",
-  },
-  link: {
-    color: "#020008",
-    textDecoration: "none",
-    padding: "11px 14px",
-    borderRadius: "5px",
-    fontSize: "14px",
-  },
-  activeLink: {
-    backgroundColor: "#a294f1",
-    fontWeight: "bold",
-  },
-};
