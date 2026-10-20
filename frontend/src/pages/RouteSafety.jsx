@@ -1,101 +1,121 @@
+
 import React, { useState } from "react";
+import {
+  ArrowRight,
+  Clock3,
+  MapPin,
+  Route,
+  ShieldCheck,
+  Sun,
+  Moon,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  ShieldAlert,
+  Sparkles,
+  Navigation,
+  Lightbulb,
+  Users,
+  LockKeyhole,
+} from "lucide-react";
+
 import {
   calculateSafetyScore,
   getSafetyLevel,
 } from "../utils/safetyScore";
 
-const RouteSafety = () => {
+import "./RouteSafety.css";
+
+const routes = [
+  {
+    id: 1,
+    name: "Route 1",
+    from: "Dhanmondi",
+    to: "Farmgate",
+    travelTime: 25,
+    distance: 6.2,
+    crimeSafety: 90,
+    lighting: 85,
+    communityReports: 80,
+    daySafety: 90,
+    nightSafety: 65,
+  },
+  {
+    id: 2,
+    name: "Route 2",
+    from: "Dhanmondi",
+    to: "Farmgate",
+    travelTime: 21,
+    distance: 5.7,
+    crimeSafety: 65,
+    lighting: 70,
+    communityReports: 60,
+    daySafety: 75,
+    nightSafety: 55,
+  },
+  {
+    id: 3,
+    name: "Route 3",
+    from: "Dhanmondi",
+    to: "Farmgate",
+    travelTime: 18,
+    distance: 5.2,
+    crimeSafety: 35,
+    lighting: 45,
+    communityReports: 50,
+    daySafety: 55,
+    nightSafety: 30,
+  },
+];
+
+function displayFactor(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value !== "number" ||
+    Number.isNaN(value)
+  ) {
+    return "Data unavailable";
+  }
+
+  return `${value}/100`;
+}
+
+function getSafetyClass(level) {
+  if (level === "HIGH") return "high";
+  if (level === "MEDIUM") return "medium";
+  if (level === "LOW") return "low";
+  return "unknown";
+}
+
+const factors = [
+  {
+    key: "crimeSafety",
+    label: "Crime Safety",
+    icon: LockKeyhole,
+  },
+  {
+    key: "lighting",
+    label: "Street Lighting",
+    icon: Lightbulb,
+  },
+  {
+    key: "communityReports",
+    label: "Community Reports",
+    icon: Users,
+  },
+  {
+    key: "timeOfDay",
+    label: "Time of Day Safety",
+    icon: Clock3,
+  },
+];
+
+export default function RouteSafety() {
   const [sortBy, setSortBy] = useState("fastest");
   const [timeContext, setTimeContext] = useState("day");
   const [expandedRoute, setExpandedRoute] = useState(null);
 
-  // Demo route data
-  const routes = [
-    {
-      id: 1,
-      name: "Route 1",
-      from: "Dhanmondi",
-      to: "Farmgate",
-      travelTime: 25,
-      distance: 6.2,
-      crimeSafety: 90,
-      lighting: 85,
-      communityReports: 80,
-      daySafety: 90,
-      nightSafety: 65,
-    },
-    {
-      id: 2,
-      name: "Route 2",
-      from: "Dhanmondi",
-      to: "Farmgate",
-      travelTime: 21,
-      distance: 5.7,
-      crimeSafety: 65,
-      lighting: 70,
-      communityReports: 60,
-      daySafety: 75,
-      nightSafety: 55,
-    },
-    {
-      id: 3,
-      name: "Route 3",
-      from: "Dhanmondi",
-      to: "Farmgate",
-      travelTime: 18,
-      distance: 5.2,
-      crimeSafety: 35,
-      lighting: 45,
-      communityReports: 50,
-      daySafety: 55,
-      nightSafety: 30,
-    },
-  ];
-
-  // Safety badge colors
-  const getBadgeStyle = (level) => {
-    if (level === "HIGH") {
-      return {
-        backgroundColor: "#dcfce7",
-        color: "#166534",
-      };
-    }
-
-    if (level === "MEDIUM") {
-      return {
-        backgroundColor: "#fef3c7",
-        color: "#92400e",
-      };
-    }
-
-    if (level === "LOW") {
-      return {
-        backgroundColor: "#fee2e2",
-        color: "#991b1b",
-      };
-    }
-
-    return {
-      backgroundColor: "#e5e7eb",
-      color: "#374151",
-    };
-  };
-
-  // Show number or "Data unavailable"
-  const displayFactor = (value) => {
-    if (
-      value === null ||
-      value === undefined ||
-      typeof value !== "number" ||
-      Number.isNaN(value)
-    ) {
-      return "Data unavailable";
-    }
-
-    return `${value}/100`;
-  };
-
-  // Add current Day/Night value before calculating score
   const routesWithScores = routes.map((route) => {
     const timeOfDay =
       timeContext === "day"
@@ -113,21 +133,14 @@ const RouteSafety = () => {
     };
   });
 
-  // Sort routes
   const sortedRoutes = [...routesWithScores].sort((a, b) => {
     if (sortBy === "safest") {
-      // Routes without score go to the bottom
       if (a.safetyScore === null && b.safetyScore === null) {
         return 0;
       }
 
-      if (a.safetyScore === null) {
-        return 1;
-      }
-
-      if (b.safetyScore === null) {
-        return -1;
-      }
+      if (a.safetyScore === null) return 1;
+      if (b.safetyScore === null) return -1;
 
       return b.safetyScore - a.safetyScore;
     }
@@ -135,363 +148,355 @@ const RouteSafety = () => {
     return a.travelTime - b.travelTime;
   });
 
-  // Open / close safety details
   const toggleDetails = (routeId) => {
-    if (expandedRoute === routeId) {
-      setExpandedRoute(null);
-    } else {
-      setExpandedRoute(routeId);
-    }
+    setExpandedRoute((current) =>
+      current === routeId ? null : routeId
+    );
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "900px",
-        margin: "0 auto",
-        padding: "40px 20px",
-      }}
-    >
-      {/* Page Header */}
-      <h1
-        style={{
-          marginBottom: "8px",
-        }}
-      >
-        Safe Route Finder
-      </h1>
+    <main className="rs-page">
+      <div className="rs-container">
 
-      <p
-        style={{
-          color: "#666",
-          marginBottom: "25px",
-        }}
-      >
-        Compare available routes based on travel time and safety score.
-      </p>
-
-      {/* Controls */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "15px",
-          marginBottom: "20px",
-        }}
-      >
-        {/* Day / Night */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          <label
-            htmlFor="time-context"
-            style={{
-              fontWeight: "600",
-            }}
-          >
-            Travel Time:
-          </label>
-
-          <select
-            id="time-context"
-            value={timeContext}
-            onChange={(e) => setTimeContext(e.target.value)}
-            style={{
-              padding: "10px 14px",
-              borderRadius: "8px",
-              border: "1px solid #d1d5db",
-              backgroundColor: "#ffffff",
-              fontSize: "15px",
-              cursor: "pointer",
-            }}
-          >
-            <option value="day">Day</option>
-            <option value="night">Night</option>
-          </select>
-        </div>
-
-        {/* Sort */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          <label
-            htmlFor="route-sort"
-            style={{
-              fontWeight: "600",
-            }}
-          >
-            Sort By:
-          </label>
-
-          <select
-            id="route-sort"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              padding: "10px 14px",
-              borderRadius: "8px",
-              border: "1px solid #d1d5db",
-              backgroundColor: "#ffffff",
-              fontSize: "15px",
-              cursor: "pointer",
-            }}
-          >
-            <option value="fastest">Fastest</option>
-            <option value="safest">Safest First</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Current Context */}
-      <div
-        style={{
-          padding: "12px 15px",
-          backgroundColor:
-            timeContext === "day" ? "#fefce8" : "#eef2ff",
-          borderRadius: "8px",
-          marginBottom: "20px",
-          fontSize: "14px",
-        }}
-      >
-        Safety scores are currently calculated for{" "}
-        <strong>
-          {timeContext === "day" ? "Day Travel" : "Night Travel"}
-        </strong>
-        .
-      </div>
-
-      {/* Route Cards */}
-      {sortedRoutes.map((route) => {
-        const safetyLevel = getSafetyLevel(route.safetyScore);
-        const isExpanded = expandedRoute === route.id;
-
-        return (
-          <div
-            key={route.id}
-            style={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "12px",
-              padding: "22px",
-              marginBottom: "20px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-            }}
-          >
-            {/* Route Name and Badge */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "15px",
-              }}
-            >
-              <h2
-                style={{
-                  margin: 0,
-                }}
-              >
-                {route.name}
-              </h2>
-
-              <span
-                style={{
-                  ...getBadgeStyle(safetyLevel),
-                  padding: "7px 14px",
-                  borderRadius: "20px",
-                  fontSize: "13px",
-                  fontWeight: "bold",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {safetyLevel === "UNKNOWN"
-                  ? "SAFETY UNKNOWN"
-                  : `${safetyLevel} SAFETY`}
-              </span>
+        {/* HERO SECTION */}
+        <section className="rs-hero">
+          <div className="rs-hero-content">
+            <div className="rs-eyebrow">
+              <Sparkles size={17} />
+              SMART ROUTE PLANNING
             </div>
 
-            {/* Route Information */}
-            <h3
-              style={{
-                marginTop: "18px",
-                marginBottom: "8px",
-              }}
-            >
-              {route.from} → {route.to}
-            </h3>
+            <h1>Find Your Safest Route</h1>
 
-            <p
-              style={{
-                color: "#555",
-                marginTop: 0,
-              }}
-            >
-              {route.travelTime} min • {route.distance} km
+            <p>
+              Compare available routes based on travel time,
+              distance, and safety scores to make more
+              informed travel decisions.
             </p>
 
-            {/* Safety Score */}
-            <div
-              style={{
-                marginTop: "18px",
-                padding: "14px",
-                backgroundColor: "#f8fafc",
-                borderRadius: "8px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: "500",
-                }}
-              >
-                Safety Score
-              </span>
+            <div className="rs-hero-stats">
+              <div className="rs-hero-stat">
+                <Route size={22} />
+                <div>
+                  <strong>{routes.length} Routes</strong>
+                  <span>Available options</span>
+                </div>
+              </div>
 
-              <strong
-                style={{
-                  fontSize: "20px",
-                }}
+              <div className="rs-hero-stat">
+                <ShieldCheck size={22} />
+                <div>
+                  <strong>Safety First</strong>
+                  <span>Compare safety scores</span>
+                </div>
+              </div>
+
+              <div className="rs-hero-stat">
+                <Clock3 size={22} />
+                <div>
+                  <strong>Smart Travel</strong>
+                  <span>Compare travel times</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rs-hero-decoration">
+            <Navigation size={110} strokeWidth={1} />
+          </div>
+        </section>
+
+        {/* FILTER SECTION */}
+        <section className="rs-controls">
+          <div className="rs-controls-title">
+            <SlidersHorizontal size={20} />
+            <span>Customize Your Journey</span>
+          </div>
+
+          <div className="rs-filter-grid">
+            <div className="rs-filter">
+              <label htmlFor="time-context">
+                {timeContext === "day" ? (
+                  <Sun size={18} />
+                ) : (
+                  <Moon size={18} />
+                )}
+                Travel Time
+              </label>
+
+              <select
+                id="time-context"
+                value={timeContext}
+                onChange={(e) =>
+                  setTimeContext(e.target.value)
+                }
               >
-                {route.safetyScore === null
-                  ? "Data unavailable"
-                  : `${route.safetyScore}/100`}
-              </strong>
+                <option value="day">Day Travel</option>
+                <option value="night">Night Travel</option>
+              </select>
             </div>
 
-            {/* Details Button */}
-            <button
-              type="button"
-              onClick={() => toggleDetails(route.id)}
-              style={{
-                marginTop: "15px",
-                padding: "10px 16px",
-                borderRadius: "8px",
-                border: "1px solid #2563eb",
-                backgroundColor: "#ffffff",
-                color: "#2563eb",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              {isExpanded
-                ? "Hide Safety Details"
-                : "View Safety Details"}
-            </button>
+            <div className="rs-filter">
+              <label htmlFor="route-sort">
+                <SlidersHorizontal size={18} />
+                Sort Routes By
+              </label>
 
-            {/* Safety Breakdown */}
-            {isExpanded && (
-              <div
-                style={{
-                  marginTop: "15px",
-                  padding: "18px",
-                  backgroundColor: "#f8fafc",
-                  borderRadius: "8px",
-                }}
+              <select
+                id="route-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
               >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    marginBottom: "15px",
-                  }}
-                >
-                  Safety Score Breakdown
-                </h3>
+                <option value="fastest">Fastest First</option>
+                <option value="safest">Safest First</option>
+              </select>
+            </div>
+          </div>
+        </section>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "10px",
-                    gap: "15px",
-                  }}
-                >
-                  <span>Crime Safety</span>
+        {/* CONTEXT NOTICE */}
+        <div className="rs-context-notice">
+          {timeContext === "day" ? (
+            <Sun size={20} />
+          ) : (
+            <Moon size={20} />
+          )}
 
-                  <strong>
-                    {displayFactor(route.crimeSafety)}
-                  </strong>
+          <span>
+            Safety scores are currently calculated for{" "}
+            <strong>
+              {timeContext === "day"
+                ? "Day Travel"
+                : "Night Travel"}
+            </strong>
+            .
+          </span>
+        </div>
+
+        {/* RESULTS HEADER */}
+        <div className="rs-results-header">
+          <div>
+            <span className="rs-section-eyebrow">
+              <MapPin size={15} />
+              ROUTE COMPARISON
+            </span>
+
+            <h2>Available Routes</h2>
+            <p>
+              Explore your options and compare safety factors.
+            </p>
+          </div>
+
+          <span className="rs-results-count">
+            {sortedRoutes.length} Routes Found
+          </span>
+        </div>
+
+        {/* ROUTE CARDS */}
+        <div className="rs-route-list">
+          {sortedRoutes.map((route, index) => {
+            const safetyLevel = getSafetyLevel(
+              route.safetyScore
+            );
+
+            const safetyClass = getSafetyClass(safetyLevel);
+            const isExpanded = expandedRoute === route.id;
+
+            const validScore =
+              typeof route.safetyScore === "number" &&
+              Number.isFinite(route.safetyScore);
+
+            const progress = validScore
+              ? Math.min(100, Math.max(0, route.safetyScore))
+              : 0;
+
+            return (
+              <article
+                key={route.id}
+                className="rs-route-card"
+              >
+                <div className="rs-card-top">
+                  <div className="rs-route-identity">
+                    <div className="rs-route-icon">
+                      <Route size={24} />
+                    </div>
+
+                    <div>
+                      <span className="rs-route-order">
+                        OPTION {index + 1}
+                      </span>
+                      <h3>{route.name}</h3>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`rs-safety-badge ${safetyClass}`}
+                  >
+                    {safetyLevel === "UNKNOWN"
+                      ? "SAFETY UNKNOWN"
+                      : `${safetyLevel} SAFETY`}
+                  </span>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "10px",
-                    gap: "15px",
-                  }}
-                >
-                  <span>Street Lighting</span>
-
-                  <strong>
-                    {displayFactor(route.lighting)}
-                  </strong>
+                <div className="rs-route-path">
+                  <MapPin size={19} />
+                  <strong>{route.from}</strong>
+                  <ArrowRight size={18} />
+                  <strong>{route.to}</strong>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "10px",
-                    gap: "15px",
-                  }}
-                >
-                  <span>Community Reports</span>
-
-                  <strong>
-                    {displayFactor(route.communityReports)}
-                  </strong>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "15px",
-                  }}
-                >
+                <div className="rs-route-meta">
                   <span>
-                    Time of Day Safety (
-                    {timeContext === "day" ? "Day" : "Night"})
+                    <Clock3 size={17} />
+                    {route.travelTime} min
                   </span>
 
-                  <strong>
-                    {displayFactor(route.timeOfDay)}
-                  </strong>
+                  <span>
+                    <Navigation size={17} />
+                    {route.distance} km
+                  </span>
                 </div>
 
-                <p
-                  style={{
-                    marginBottom: 0,
-                    marginTop: "16px",
-                    paddingTop: "12px",
-                    borderTop: "1px solid #e5e7eb",
-                    color: "#666",
-                    fontSize: "13px",
-                  }}
-                >
-                  The safety score considers crime safety, street
-                  lighting, community reports, and time-of-day
-                  conditions.
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+                {/* SAFETY SCORE */}
+                <div className="rs-score-panel">
+                  <div className="rs-score-top">
+                    <div>
+                      <span className="rs-score-label">
+                        <ShieldCheck size={18} />
+                        Safety Score
+                      </span>
 
-export default RouteSafety;
+                      <small>
+                        Based on four safety factors
+                      </small>
+                    </div>
+
+                    <strong className={`rs-score-value ${safetyClass}`}>
+                      {validScore
+                        ? `${route.safetyScore}/100`
+                        : "N/A"}
+                    </strong>
+                  </div>
+
+                  <div
+                    className="rs-progress-track"
+                    role="progressbar"
+                    aria-label={`${route.name} safety score`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={
+                      validScore ? progress : undefined
+                    }
+                  >
+                    <div
+                      className={`rs-progress-fill ${safetyClass}`}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* DETAILS BUTTON */}
+                <button
+                  type="button"
+                  className="rs-details-btn"
+                  onClick={() => toggleDetails(route.id)}
+                  aria-expanded={isExpanded}
+                  aria-controls={`rs-details-${route.id}`}
+                >
+                  <ShieldCheck size={18} />
+
+                  {isExpanded
+                    ? "Hide Safety Details"
+                    : "View Safety Details"}
+
+                  {isExpanded ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
+                </button>
+
+                {/* EXPANDABLE BREAKDOWN */}
+                {isExpanded && (
+                  <div
+                    className="rs-breakdown"
+                    id={`rs-details-${route.id}`}
+                  >
+                    <h4>Safety Score Breakdown</h4>
+
+                    <div className="rs-factor-list">
+                      {factors.map((factor) => {
+                        const Icon = factor.icon;
+                        const value = route[factor.key];
+
+                        const factorProgress =
+                          typeof value === "number" &&
+                          Number.isFinite(value)
+                            ? Math.min(
+                                100,
+                                Math.max(0, value)
+                              )
+                            : 0;
+
+                        return (
+                          <div
+                            key={factor.key}
+                            className="rs-factor"
+                          >
+                            <div className="rs-factor-top">
+                              <span>
+                                <Icon size={17} />
+                                {factor.label}
+                                {factor.key === "timeOfDay"
+                                  ? ` (${timeContext === "day" ? "Day" : "Night"})`
+                                  : ""}
+                              </span>
+
+                              <strong>
+                                {displayFactor(value)}
+                              </strong>
+                            </div>
+
+                            <div className="rs-factor-track">
+                              <div
+                                className="rs-factor-fill"
+                                style={{
+                                  width: `${factorProgress}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="rs-breakdown-note">
+                      <ShieldAlert size={18} />
+                      <span>
+                        Safety scores consider crime safety,
+                        street lighting, community reports,
+                        and time-of-day conditions.
+                        These values are estimates,
+                        not a guarantee of safety.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+
+        {/* FOOTER */}
+        <div className="rs-footer-note">
+          <ShieldCheck size={20} />
+          <p>
+            Stay aware of your surroundings and keep
+            your trusted contacts informed during travel.
+            These demonstration routes are not live navigation data.
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
