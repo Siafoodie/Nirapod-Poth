@@ -63,6 +63,7 @@ app.get("/api/health", (req, res) => {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/live", require("./routes/liveSessionRoutes"));
 app.use("/api/moderation", moderationRoutes);
 app.use("/api/safe-places", safePlaceRoutes);
 app.use("/api/routes", routeRoutes);
