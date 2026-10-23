@@ -1,10 +1,10 @@
 import React from "react";
 import Layout from "../components/Layout";
 import { useLanguage } from "../context/LanguageContext";
-
+import useLiveShare from "../hooks/useLiveShare";
 export default function Emergency() {
   const { t } = useLanguage();
-
+const { session, sharing, error: liveError, start, stop } = useLiveShare();
   const sendEmergencySMS = () => {
     const message =
       "EMERGENCY! I need help. Sent via Nirapod Poth.";
@@ -163,8 +163,86 @@ export default function Emergency() {
           >
             {t("callWomenHelpline") || "Women & Children Helpline (109)"}
           </button>
+          {/* US-15 Live location */}
+<div style={{ marginTop: 20, textAlign: "left" }}>
+  <h3 style={{ margin: "0 0 8px", fontSize: 15, color: "#4a2c85" }}>
+    Live location
+  </h3>
+  <p style={{ margin: "0 0 12px", fontSize: 12, color: "#7e6c9c" }}>
+    Share your live GPS with trusted contacts for up to 60 minutes.
+  </p>
+
+  {!sharing ? (
+    <button
+      type="button"
+      onClick={() => start([])}
+     style={{
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: 14,
+  border: "none",
+  background: "#693ed8",
+  color: "#fff",
+  fontWeight: 700,
+  fontSize: 14,
+  cursor: "pointer",
+  boxShadow: "0 6px 18px rgba(91, 43, 217, 0.22)",
+}}
+    >
+      Start live location
+    </button>
+  ) : (
+    <div
+      style={{
+        padding: 14,
+        borderRadius: 14,
+        background: "#f5f3ff",
+        border: "1px solid #e9e1f3",
+      }}
+    >
+      <p style={{ margin: "0 0 8px", fontWeight: 700, color: "#16a34a" }}>
+        Live sharing ON
+      </p>
+      <p style={{ margin: "0 0 6px", fontSize: 12 }}>
+        Share this link with trusted contacts:
+      </p>
+      <code
+        style={{
+          display: "block",
+          fontSize: 11,
+          wordBreak: "break-all",
+          marginBottom: 12,
+        }}
+      >
+        {session?.shareToken
+          ? `${window.location.origin}/live/${session.shareToken}`
+          : ""}
+      </code>
+      <button
+        type="button"
+        onClick={stop}
+        style={{
+          width: "100%",
+          padding: "10px 14px",
+          borderRadius: 12,
+          border: "1px solid #f9a8d4",
+          background: "#fdf2f8",
+          color: "#9d174d",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        Stop sharing
+      </button>
+    </div>
+  )}
+
+  {liveError && (
+    <p style={{ marginTop: 10, fontSize: 12, color: "#b91c1c" }}>{liveError}</p>
+  )}
+</div>
         </div>
       </div>
     </Layout>
   );
-}  
+}
