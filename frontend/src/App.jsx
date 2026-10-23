@@ -16,12 +16,17 @@ import NearbyReports from "./pages/NearbyReports.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import Navbar from "./components/Navbar.jsx";
 import About from "./pages/About.jsx";
+import OfflineBanner from "./components/OfflineBanner";
+
 function AppContent() {
   const location = useLocation();
 
   return (
     <>
       {location.pathname !== "/" && <Navbar />}
+
+      {/* US-14: shows only when offline or pending queue items */}
+      <OfflineBanner />
 
       <Routes>
         <Route path="/" element={<Welcome />} />
@@ -37,7 +42,7 @@ function AppContent() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/about" element={<About />} />
         <Route path="/trusted-contact" element={<Trustedcontact />} />
- 
+
         <Route path="/report" element={<ReportForm />} />
         <Route path="/nearby-reports" element={<NearbyReports />} />
 

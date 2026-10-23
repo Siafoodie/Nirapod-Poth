@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const Report = require("../models/Report");
@@ -93,8 +92,7 @@ const calculateDistanceKm = (
       Math.cos(toRadians(latitude2)) *
       Math.sin(longitudeDifference / 2) ** 2;
 
-  const c =
-    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return earthRadiusKm * c;
 };
@@ -107,9 +105,7 @@ router.get("/nearby", async (req, res) => {
     const longitude = Number(req.query.longitude);
 
     const radiusKm =
-      req.query.radiusKm === undefined
-        ? 5
-        : Number(req.query.radiusKm);
+      req.query.radiusKm === undefined ? 5 : Number(req.query.radiusKm);
 
     const limit = parseLimit(req.query.limit);
 
@@ -211,15 +207,28 @@ router.post("/", async (req, res) => {
       description,
       latitude,
       longitude,
+      clientId,
     } = req.body;
+
+    // US-14: offline queue dedupe — same clientId must not create twice
+    if (typeof clientId === "string" && clientId.trim()) {
+      const existing = await Report.findOne({ clientId: clientId.trim() });
+      if (existing) {
+        return res.status(200).json({
+          success: true,
+          message: "Report already saved",
+          data: toReportResponse(existing),
+          duplicate: true,
+        });
+      }
+    }
 
     if (
       typeof incidentType !== "string" ||
       !incidentType.trim() ||
       typeof location !== "string" ||
       !location.trim() ||
-      (description !== undefined &&
-        typeof description !== "string")
+      (description !== undefined && typeof description !== "string")
     ) {
       return res.status(400).json({
         success: false,
@@ -228,11 +237,8 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const hasLatitude =
-      latitude !== undefined && latitude !== null;
-
-    const hasLongitude =
-      longitude !== undefined && longitude !== null;
+    const hasLatitude = latitude !== undefined && latitude !== null;
+    const hasLongitude = longitude !== undefined && longitude !== null;
 
     if (hasLatitude !== hasLongitude) {
       return res.status(400).json({
@@ -270,6 +276,10 @@ router.post("/", async (req, res) => {
       moderationStatus: "pending",
     };
 
+    if (typeof clientId === "string" && clientId.trim()) {
+      reportData.clientId = clientId.trim();
+    }
+
     if (hasLatitude) {
       reportData.geo = {
         type: "Point",
@@ -283,9 +293,32 @@ router.post("/", async (req, res) => {
       success: true,
       message: "Report submitted successfully!",
       data: toReportResponse(report),
+      duplicate: false,
     });
   } catch (error) {
     console.error("Create report error:", error);
+
+    // Unique index race: two parallel offline retries with same clientId
+    if (
+      error.code === 11000 &&
+      (error.keyPattern?.clientId || String(error.message || "").includes("clientId"))
+    ) {
+      try {
+        const existing = await Report.findOne({
+          clientId: String(req.body?.clientId || "").trim(),
+        });
+        if (existing) {
+          return res.status(200).json({
+            success: true,
+            message: "Report already saved",
+            data: toReportResponse(existing),
+            duplicate: true,
+          });
+        }
+      } catch (lookupError) {
+        console.error("Duplicate lookup error:", lookupError);
+      }
+    }
 
     return res.status(500).json({
       success: false,
@@ -441,9 +474,7 @@ router.post(
             },
           },
         ],
-        
-{ new: true, updatePipeline: true }
-
+        { new: true, updatePipeline: true }
       );
 
       if (!report) {

@@ -70,7 +70,7 @@ const geoSchema = new mongoose.Schema(
 
 const reportSchema = new mongoose.Schema(
   {
-    
+
     incidentType: {
       type: String,
       required: true,
@@ -89,7 +89,12 @@ const reportSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-
+clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     geo: {
       type: geoSchema,
       default: undefined,
