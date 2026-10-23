@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import useGeolocation from "../hooks/useGeolocation";
 import { api } from "../api";
+import { enqueueOfflineItem, isOnline } from "../services/offlineQueue";
 
 const initialForm = { incidentType: "", location: "", description: "" };
 
@@ -47,8 +48,14 @@ const ReportForm = () => {
       const coords = await getCurrentPosition();
       const lat = Number(coords?.lat);
       const lng = Number(coords?.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
-          lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+      ) {
         throw new Error("Invalid GPS coordinates");
       }
       setIncidentCoords({ lat, lng });
@@ -59,7 +66,9 @@ const ReportForm = () => {
     } catch (err) {
       // An IP-based location is approximate and must not be sent as exact GPS.
       setIncidentCoords(null);
-      setStatusMessage("❌ GPS unavailable. Please enter the incident location manually.");
+      setStatusMessage(
+        "❌ GPS unavailable. Please enter the incident location manually."
+      );
     } finally {
       setLoadingGps(false);
     }
@@ -70,15 +79,29 @@ const ReportForm = () => {
     if (submitting || loadingGps) return;
     setSubmitting(true);
     setStatusMessage("");
+
+    // No identity fields and no automatic geolocation request on submit.
+    const payload = {
+      incidentType: formData.incidentType,
+      location: formData.location.trim(),
+      description: formData.description.trim(),
+      latitude: incidentCoords?.lat ?? null,
+      longitude: incidentCoords?.lng ?? null,
+    };
+
     try {
-      // No identity fields and no automatic geolocation request on submit.
-      const payload = {
-        incidentType: formData.incidentType,
-        location: formData.location.trim(),
-        description: formData.description.trim(),
-        latitude: incidentCoords?.lat ?? null,
-        longitude: incidentCoords?.lng ?? null,
-      };
+      // Offline → queue locally (US-14 / T-14.2)
+      if (!isOnline()) {
+        enqueueOfflineItem({ type: "report", payload });
+        setStatusMessage(
+          "📡 You are offline. Report saved locally and will send when internet returns."
+        );
+        setFormData(initialForm);
+        setIncidentCoords(null);
+        setImagePreview(null);
+        return;
+      }
+
       await api("/reports", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -88,11 +111,19 @@ const ReportForm = () => {
       setIncidentCoords(null);
       setImagePreview(null);
     } catch (err) {
-      setStatusMessage(`❌ ${err.message || "Failed to submit report"}`);
+      // Network/API failure → still queue for retry
+      enqueueOfflineItem({ type: "report", payload });
+      setStatusMessage(
+        `📡 ${err.message || "Failed to submit"} — saved offline for automatic retry.`
+      );
+      setFormData(initialForm);
+      setIncidentCoords(null);
+      setImagePreview(null);
     } finally {
       setSubmitting(false);
     }
   };
+
   return (
     <div style={styles.pageContainer}>
       <div style={styles.card}>
@@ -107,19 +138,21 @@ const ReportForm = () => {
               ...styles.alertBox,
               backgroundColor: statusMessage.startsWith("✅")
                 ? "#e8f5e9"
-                : "#ffebee",
+                : statusMessage.startsWith("📡")
+                  ? "#f3eefe"
+                  : "#ffebee",
               color: statusMessage.startsWith("✅")
                 ? "#2e7d32"
-                : "#c62828",
+                : statusMessage.startsWith("📡")
+                  ? "#5b2bd9"
+                  : "#c62828",
             }}
           >
             {statusMessage}
           </div>
         )}
 
-        {geoError && (
-          <p style={styles.errorText}>{geoError}</p>
-        )}
+        {geoError && <p style={styles.errorText}>{geoError}</p>}
 
         <form onSubmit={handleSubmit}>
           {/* INCIDENT TYPE */}
@@ -169,28 +202,22 @@ const ReportForm = () => {
                 disabled={loadingGps || submitting}
                 style={{
                   ...styles.gpsButton,
-                  backgroundColor: loadingGps
-                    ? "#e0d6f2"
-                    : "#f2ebf9",
+                  backgroundColor: loadingGps ? "#e0d6f2" : "#f2ebf9",
                 }}
                 title="Use current location as incident location"
               >
                 {loadingGps ? "⌛ Fetching..." : "📍 GPS"}
-            </button>
-</div>
+              </button>
+            </div>
 
-<p style={styles.helperText}>
-  🔒 Anonymous Report: Your name, email, phone number,
-  and travel history will not be attached to this report.
-  GPS location is optional. If you use GPS, your
-  coordinates will be included in the report.
-  Please avoid including personal information
-  in the description.
-</p>
-
-</div>
-
-{/* DESCRIPTION */}
+            <p style={styles.helperText}>
+              🔒 Anonymous Report: Your name, email, phone number, and travel
+              history will not be attached to this report. GPS location is
+              optional. If you use GPS, your coordinates will be included in the
+              report. Please avoid including personal information in the
+              description.
+            </p>
+          </div>
 
           {/* DESCRIPTION */}
           <div style={styles.fieldGroup}>
@@ -211,19 +238,12 @@ const ReportForm = () => {
 
           {/* IMAGE PREVIEW */}
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>
-              Attach Image (Preview Only)
-            </label>
+            <label style={styles.label}>Attach Image (Preview Only)</label>
 
             {!imagePreview ? (
               <label style={styles.uploadBox}>
                 <span style={{ fontSize: "20px" }}>📷</span>
-                <span
-                  style={{
-                    fontSize: "13px",
-                    color: "#6b46c1",
-                  }}
-                >
+                <span style={{ fontSize: "13px", color: "#6b46c1" }}>
                   Click to select image
                 </span>
 
@@ -252,9 +272,7 @@ const ReportForm = () => {
               </div>
             )}
 
-            <p style={styles.helperText}>
-              Image attachment is not saved yet.
-            </p>
+            <p style={styles.helperText}>Image attachment is not saved yet.</p>
           </div>
 
           {/* SUBMIT */}
