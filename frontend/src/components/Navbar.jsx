@@ -23,32 +23,24 @@ import {
   ChevronRight,
   Sparkles,
   LogOut,
+  LayoutDashboard,
 } from "lucide-react";
 
 import { clearStoredUser } from "../utils/userStorage";
 import { API_BASE_URL } from "../api";
 import "./Navbar.css";
 
-// ==========================================
-// GET CURRENT USER
-// ==========================================
-
+// Get logged-in user
 function getCurrentUser() {
   try {
     const storedUser = localStorage.getItem("user");
-
-    return storedUser
-      ? JSON.parse(storedUser)
-      : null;
+    return storedUser ? JSON.parse(storedUser) : null;
   } catch {
     return null;
   }
 }
 
-// ==========================================
-// PROFILE IMAGE URL
-// ==========================================
-
+// Profile image URL
 function getProfileImageUrl(path) {
   if (!path) return "";
 
@@ -63,11 +55,8 @@ function getProfileImageUrl(path) {
   return `${server}/${String(path).replace(/^\/+/, "")}`;
 }
 
-// ==========================================
-// NAVIGATION ITEMS
-// ==========================================
-
-const menuItems = [
+// Normal user navigation
+const userMenuItems = [
   {
     label: "Home",
     path: "/home",
@@ -115,9 +104,19 @@ const menuItems = [
   },
 ];
 
-// ==========================================
-// NAVBAR COMPONENT
-// ==========================================
+// Admin navigation
+const adminMenuItems = [
+  {
+    label: "Admin Dashboard",
+    path: "/admin/reports",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "My Profile",
+    path: "/profile",
+    icon: UserRound,
+  },
+];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -126,8 +125,7 @@ export default function Navbar() {
     getCurrentUser
   );
 
-  const [avatarFailed, setAvatarFailed] =
-    useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -135,9 +133,19 @@ export default function Navbar() {
   const toggleRef = useRef(null);
   const panelRef = useRef(null);
 
-  // ========================================
-  // USER INFORMATION
-  // ========================================
+  // Detect admin
+  const isAdmin =
+    String(currentUser?.role || "")
+      .trim()
+      .toLowerCase() === "admin";
+
+  const visibleMenuItems = isAdmin
+    ? adminMenuItems
+    : userMenuItems;
+
+  const homePath = isAdmin
+    ? "/admin/reports"
+    : "/home";
 
   const displayName =
     currentUser?.name ||
@@ -152,10 +160,7 @@ export default function Navbar() {
 
   const avatarUrl = getProfileImageUrl(profileImage);
 
-  // ========================================
-  // SYNC USER INFORMATION
-  // ========================================
-
+  // Synchronize user
   useEffect(() => {
     const syncUser = () => {
       setCurrentUser(getCurrentUser());
@@ -170,27 +175,18 @@ export default function Navbar() {
     };
   }, []);
 
-  // ========================================
-  // RESET AVATAR ERROR
-  // ========================================
-
+  // Reset avatar
   useEffect(() => {
     setAvatarFailed(false);
   }, [avatarUrl]);
 
-  // ========================================
-  // CLOSE SIDEBAR ON ROUTE CHANGE
-  // ========================================
-
+  // Close sidebar on navigation
   useEffect(() => {
     setMenuOpen(false);
     setCurrentUser(getCurrentUser());
   }, [location.pathname]);
 
-  // ========================================
-  // CLOSE SIDEBAR WITH ESCAPE
-  // ========================================
-
+  // Escape key
   useEffect(() => {
     if (!menuOpen) return;
 
@@ -201,10 +197,7 @@ export default function Navbar() {
       }
     };
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener(
@@ -214,47 +207,30 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
-  // ========================================
-  // FOCUS PROFILE WHEN SIDEBAR OPENS
-  // ========================================
-
+  // Focus sidebar
   useEffect(() => {
     if (menuOpen) {
-      panelRef.current
-        ?.querySelector("a")
-        ?.focus();
+      panelRef.current?.querySelector("a")?.focus();
     }
   }, [menuOpen]);
 
-  // ========================================
-  // SIGN OUT FUNCTION
-  // ========================================
-
+  // Sign out
   const handleSignOut = () => {
     try {
-      // Clear stored authentication data
       clearStoredUser();
 
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
-      // Reset local user state
       setCurrentUser(null);
       setAvatarFailed(false);
-
-      // Close navigation sidebar
       setMenuOpen(false);
 
-      // Redirect to Welcome / Intro page
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Sign out error:", error);
     }
   };
-
-  // ========================================
-  // CLOSE SIDEBAR
-  // ========================================
 
   const closeMenu = () => {
     setMenuOpen(false);
@@ -263,16 +239,10 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ====================================
-          MAIN NAVBAR HEADER
-      ==================================== */}
-
+      {/* Main header */}
       <header className="np-nav-header">
-
-        {/* LOGO AND BRAND */}
-
         <Link
-          to="/home"
+          to={homePath}
           className="np-nav-brand"
         >
           <img
@@ -286,12 +256,12 @@ export default function Navbar() {
             </strong>
 
             <small>
-              Your Safety Companion
+              {isAdmin
+                ? "Administration Panel"
+                : "Your Safety Companion"}
             </small>
           </div>
         </Link>
-
-        {/* MENU BUTTON */}
 
         <button
           ref={toggleRef}
@@ -300,9 +270,7 @@ export default function Navbar() {
             menuOpen ? "open" : ""
           }`}
           aria-label={
-            menuOpen
-              ? "Close menu"
-              : "Open menu"
+            menuOpen ? "Close menu" : "Open menu"
           }
           aria-expanded={menuOpen}
           aria-controls="np-sidebar"
@@ -317,18 +285,12 @@ export default function Navbar() {
           )}
 
           <span>
-            {menuOpen
-              ? "Close Menu"
-              : "Explore Menu"}
+            {menuOpen ? "Close Menu" : "Explore Menu"}
           </span>
         </button>
-
       </header>
 
-      {/* ====================================
-          BACKDROP
-      ==================================== */}
-
+      {/* Backdrop */}
       {menuOpen && (
         <button
           className="np-nav-backdrop"
@@ -338,10 +300,7 @@ export default function Navbar() {
         />
       )}
 
-      {/* ====================================
-          SIDEBAR
-      ==================================== */}
-
+      {/* Sidebar */}
       <aside
         ref={panelRef}
         id="np-sidebar"
@@ -352,18 +311,15 @@ export default function Navbar() {
         aria-hidden={!menuOpen}
         inert={!menuOpen}
       >
-
-        {/* ==================================
-            SIDEBAR HEADER
-        ================================== */}
-
+        {/* Sidebar header */}
         <div className="np-nav-sidebar-top">
-
           <div className="np-nav-sidebar-title">
             <Sparkles size={16} />
 
             <span>
-              MY NIRAPOD POTH
+              {isAdmin
+                ? "ADMIN PANEL"
+                : "MY NIRAPOD POTH"}
             </span>
           </div>
 
@@ -375,30 +331,20 @@ export default function Navbar() {
           >
             <X size={18} />
           </button>
-
         </div>
 
-        {/* ==================================
-            PROFILE CARD
-        ================================== */}
-
+        {/* Profile card */}
         <Link
           to="/profile"
           className="np-profile-card"
           onClick={() => setMenuOpen(false)}
         >
-
-          {/* PROFILE AVATAR */}
-
           <div className="np-profile-avatar">
-
             {avatarUrl && !avatarFailed ? (
               <img
                 src={avatarUrl}
                 alt={`${displayName} profile`}
-                onError={() =>
-                  setAvatarFailed(true)
-                }
+                onError={() => setAvatarFailed(true)}
               />
             ) : (
               <UserRound
@@ -406,65 +352,50 @@ export default function Navbar() {
                 className="np-profile-fallback"
               />
             )}
-
           </div>
 
-          {/* PROFILE INFORMATION */}
-
           <div className="np-profile-details">
-
-            <strong>
-              {displayName}
-            </strong>
+            <strong>{displayName}</strong>
 
             <span>
-              Personal Account
+              {isAdmin
+                ? "Administrator Account"
+                : "Personal Account"}
             </span>
 
             <small>
               View Profile
               <ChevronRight size={13} />
             </small>
-
           </div>
 
           <ChevronRight
             className="np-profile-right-arrow"
             size={19}
           />
-
         </Link>
 
-        {/* ==================================
-            QUICK NAVIGATION LABEL
-        ================================== */}
-
+        {/* Navigation label */}
         <div className="np-menu-section-label">
-          QUICK NAVIGATION
+          {isAdmin
+            ? "ADMIN NAVIGATION"
+            : "QUICK NAVIGATION"}
         </div>
 
-        {/* ==================================
-            NAVIGATION LINKS
-        ================================== */}
-
+        {/* Navigation items */}
         <nav className="np-nav-list">
-
-          {menuItems.map(
+          {visibleMenuItems.map(
             ({ label, path, icon: Icon }) => (
-
               <NavLink
                 key={path}
                 to={path}
-                onClick={() =>
-                  setMenuOpen(false)
-                }
+                onClick={() => setMenuOpen(false)}
                 className={({ isActive }) =>
                   `np-nav-link ${
                     isActive ? "active" : ""
                   }`
                 }
               >
-
                 <span className="np-nav-link-icon">
                   <Icon
                     size={19}
@@ -480,64 +411,44 @@ export default function Navbar() {
                   size={16}
                   className="np-nav-arrow"
                 />
-
               </NavLink>
-
             )
           )}
-
         </nav>
 
-        {/* ==================================
-            SIGN OUT + FOOTER
-        ================================== */}
-
+        {/* Sidebar bottom */}
         <div className="np-nav-sidebar-bottom">
-
-          {/* SIGN OUT BUTTON */}
-
           <button
             type="button"
             className="np-nav-signout"
             onClick={handleSignOut}
           >
-
             <span className="np-nav-signout-left">
-
               <LogOut size={20} />
-
-              <span>
-                Sign Out
-              </span>
-
+              <span>Sign Out</span>
             </span>
 
             <ChevronRight size={17} />
-
           </button>
 
-          {/* FOOTER */}
-
           <div className="np-nav-sidebar-footer">
-
             <ShieldCheck size={22} />
 
             <div>
-
               <strong>
-                Stay aware. Stay connected.
+                {isAdmin
+                  ? "Manage reports responsibly."
+                  : "Stay aware. Stay connected."}
               </strong>
 
               <small>
-                Your journey matters 💜
+                {isAdmin
+                  ? "Nirapod Poth Administration"
+                  : "Your journey matters 💜"}
               </small>
-
             </div>
-
           </div>
-
         </div>
-
       </aside>
     </>
   );

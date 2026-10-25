@@ -46,25 +46,39 @@ export default function Auth({ register = false }) {
       );
 
       if (!data.token || !data.user) {
-        throw new Error("Invalid authentication response.");
+        throw new Error(
+          "Invalid authentication response."
+        );
       }
 
-      // Existing authentication flow still uses this token.
+      // Save authentication token
       localStorage.setItem("token", data.token);
 
-      // Store only approved user fields.
+      // Save user information including role
       saveUser(data.user);
 
-      // Clear password from component state.
+      // Clear password
       setFormData({
         name: "",
         email: "",
         password: "",
       });
 
-      navigate("/home");
+      // Detect role from server response
+      const isAdmin =
+        String(data.user.role || "")
+          .trim()
+          .toLowerCase() === "admin";
+
+      // Redirect based on role
+      navigate(
+        isAdmin ? "/admin/reports" : "/home",
+        { replace: true }
+      );
     } catch (err) {
-      setError(err.message || "Authentication failed.");
+      setError(
+        err.message || "Authentication failed."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +94,9 @@ export default function Auth({ register = false }) {
         />
 
         <h1>
-          {register ? "Create Account" : "Welcome Back"}
+          {register
+            ? "Create Account"
+            : "Welcome Back"}
         </h1>
 
         <p>
@@ -138,7 +154,10 @@ export default function Auth({ register = false }) {
             </div>
           )}
 
-          <Button type="submit" disabled={submitting}>
+          <Button
+            type="submit"
+            disabled={submitting}
+          >
             {submitting
               ? "Please wait..."
               : register
@@ -152,8 +171,12 @@ export default function Auth({ register = false }) {
             ? "Already have an account? "
             : "New here? "}
 
-          <Link to={register ? "/login" : "/register"}>
-            {register ? "Sign In" : "Create Account"}
+          <Link
+            to={register ? "/login" : "/register"}
+          >
+            {register
+              ? "Sign In"
+              : "Create Account"}
           </Link>
         </p>
       </div>

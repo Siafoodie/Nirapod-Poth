@@ -7,6 +7,7 @@ const path = require("path");
 
 const errorHandler = require("./middleware/errorHandler");
 
+// Import Routes
 const authRoutes = require("./routes/authRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const moderationRoutes = require("./routes/moderationRoutes");
@@ -14,10 +15,15 @@ const safePlaceRoutes = require("./routes/safePlaceRoutes");
 const routeRoutes = require("./routes/routeRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const profileRoutes = require("./routes/profileRoutes");
+const sosRoutes = require("./routes/sosRoutes");
+const liveSessionRoutes = require("./routes/liveSessionRoutes");
 
 const app = express();
 
-// Security middleware
+// =====================================
+// Security Middleware
+// =====================================
+
 app.use(
   helmet({
     crossOriginResourcePolicy: {
@@ -28,14 +34,20 @@ app.use(
 
 app.use(cors());
 
-// Parsing middleware
+// =====================================
+// Body Parsing Middleware
+// Must be BEFORE API routes
+// =====================================
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logging
-// Privacy-safe HTTP logging
-// Log only method, route path, status and response time.
-// Avoid query parameters and request bodies.
+// =====================================
+// Privacy-Safe HTTP Logging
+// =====================================
+
+// Avoid logging query parameters
+// and request bodies.
 
 morgan.token("safe-path", (req) => {
   return req.path;
@@ -45,13 +57,19 @@ app.use(
   morgan(":method :safe-path :status :response-time ms")
 );
 
-// Static profile uploads
+// =====================================
+// Static Profile Uploads
+// =====================================
+
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "../uploads"))
 );
 
-// Health check
+// =====================================
+// Health Check
+// =====================================
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -60,17 +78,34 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// API routes
+// =====================================
+// API Routes
+// =====================================
+
 app.use("/api/auth", authRoutes);
+
 app.use("/api/reports", reportRoutes);
-app.use("/api/live", require("./routes/liveSessionRoutes"));
+
+app.use("/api/live", liveSessionRoutes);
+
 app.use("/api/moderation", moderationRoutes);
+
 app.use("/api/safe-places", safePlaceRoutes);
+
 app.use("/api/routes", routeRoutes);
+
 app.use("/api/profile", profileRoutes);
+
 app.use("/api/contacts", contactRoutes);
 
-// Error handler must be last.
+// US-14: Offline SOS Synchronization
+app.use("/api/sos", sosRoutes);
+
+// =====================================
+// Global Error Handler
+// Must be LAST
+// =====================================
+
 app.use(errorHandler);
 
 module.exports = app;
