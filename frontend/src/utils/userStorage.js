@@ -32,6 +32,15 @@ export const sanitizeUser = (user) => {
     safeUser.profileImage = user.profileImage;
   }
 
+  // Preserve role for role-based navigation
+  if (typeof user.role === "string") {
+    const role = user.role.trim().toLowerCase();
+
+    safeUser.role = role === "admin" ? "admin" : "user";
+  } else {
+    safeUser.role = "user";
+  }
+
   return safeUser;
 };
 
