@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import "./AdminDashboard.css";
 
 const API_BASE = (
   import.meta.env.VITE_API_URL || "http://localhost:5000"
@@ -8,39 +9,16 @@ const API_BASE = (
   .replace(/\/+$/, "")
   .replace(/\/api$/, "");
 
-const styles = {
-  page: {
-    maxWidth: 1100,
-    margin: "30px auto",
-    padding: 20,
-    fontFamily: "Arial, sans-serif",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  filters: {
-    display: "flex",
-    gap: 10,
-    margin: "25px 0",
-    flexWrap: "wrap",
-  },
-  card: {
-    border: "1px solid #ddd",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    background: "#fff",
-  },
-  button: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: 7,
-    cursor: "pointer",
-  },
+const FILTERS = ["pending", "approved", "rejected"];
+
+const formatDate = (value) => {
+  if (!value) return "Unknown";
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? "Unknown"
+    : date.toLocaleString();
 };
 
 export default function AdminDashboard() {
@@ -57,6 +35,7 @@ export default function AdminDashboard() {
   const loadReports = useCallback(async () => {
     if (!token) {
       setLoading(false);
+      setReports([]);
       return;
     }
 
@@ -83,14 +62,18 @@ export default function AdminDashboard() {
       }
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to load reports");
+        throw new Error(
+          result.message || "Failed to load reports"
+        );
       }
 
       setAccessDenied(false);
-      setReports(result.data || []);
+      setReports(
+        Array.isArray(result.data) ? result.data : []
+      );
     } catch (err) {
       setReports([]);
-      setError(err.message);
+      setError(err.message || "Failed to load reports");
     } finally {
       setLoading(false);
     }
@@ -141,14 +124,23 @@ export default function AdminDashboard() {
 
       const result = await response.json();
 
+      if (response.status === 401 || response.status === 403) {
+        setAccessDenied(true);
+        throw new Error(
+          result.message || "You do not have admin access"
+        );
+      }
+
       if (!response.ok) {
-        throw new Error(result.message || "Moderation failed");
+        throw new Error(
+          result.message || "Moderation failed"
+        );
       }
 
       setMessage(`Report ${action} successfully.`);
       await loadReports();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Moderation failed");
     } finally {
       setBusyId(null);
     }
@@ -156,7 +148,7 @@ export default function AdminDashboard() {
 
   if (!token) {
     return (
-      <main style={styles.page}>
+      <main className="np-admin-page">
         <h2>Admin Login Required</h2>
         <p>Please login before accessing this page.</p>
         <Link to="/login">Go to Login</Link>
@@ -166,26 +158,31 @@ export default function AdminDashboard() {
 
   if (accessDenied) {
     return (
-      <main style={styles.page}>
+      <main className="np-admin-page">
         <h2>Access Denied</h2>
-        <p>{error || "Only administrators can access this page."}</p>
+        <p>
+          {error || "Only administrators can access this page."}
+        </p>
         <Link to="/home">Back to Home</Link>
       </main>
     );
   }
 
   return (
-    <main style={styles.page}>
-      <div style={styles.header}>
+    <main className="np-admin-page">
+      <div className="np-admin-header">
         <div>
           <h1>Admin Review Dashboard</h1>
           <p>Review and moderate incident reports.</p>
         </div>
-        <Link to="/home">Back to Home</Link>
+
+        <Link to="/home" className="np-admin-back">
+          Back to Home
+        </Link>
       </div>
 
-      <div style={styles.filters}>
-        {["pending", "approved", "rejected"].map((status) => (
+      <div className="np-admin-filters">
+        {FILTERS.map((status) => (
           <button
             key={status}
             type="button"
@@ -193,13 +190,10 @@ export default function AdminDashboard() {
               setFilter(status);
               setMessage("");
             }}
-            style={{
-              ...styles.button,
-              background:
-                filter === status ? "#2563eb" : "#e5e7eb",
-              color: filter === status ? "#fff" : "#111",
-              textTransform: "capitalize",
-            }}
+            className={`np-admin-filter ${
+              filter === status ? "active" : ""
+            }`}
+            aria-pressed={filter === status}
           >
             {status}
           </button>
@@ -207,13 +201,13 @@ export default function AdminDashboard() {
       </div>
 
       {message && (
-        <p role="status" style={{ color: "green" }}>
+        <p role="status" className="np-admin-success">
           {message}
         </p>
       )}
 
       {error && (
-        <p role="alert" style={{ color: "crimson" }}>
+        <p role="alert" className="np-admin-error">
           {error}
         </p>
       )}
@@ -223,121 +217,111 @@ export default function AdminDashboard() {
       ) : reports.length === 0 ? (
         <p>No {filter} reports found.</p>
       ) : (
-        reports.map((report) => (
-          <article key={report._id} style={styles.card}>
-            <h3>{report.incidentType}</h3>
+        <div className="np-admin-reports">
+          {reports.map((report) => (
+            <article
+              key={report._id}
+              className="np-admin-card"
+            >
+              <h3>{report.incidentType}</h3>
 
-            <p>
-              <strong>Location:</strong> {report.location}
-            </p>
+              <p>
+                <strong>Location:</strong>{" "}
+                {report.location}
+              </p>
 
-            <p>
-              <strong>Description:</strong>{" "}
-              {report.description || "No description provided"}
-            </p>
+              <p>
+                <strong>Description:</strong>{" "}
+                {report.description ||
+                  "No description provided"}
+              </p>
 
-            <p>
-              <strong>Moderation Status:</strong>{" "}
-              {report.moderationStatus || "pending"}
-            </p>
+              <p>
+                <strong>Moderation Status:</strong>{" "}
+                {report.moderationStatus || "pending"}
+              </p>
 
-            <p>
-              <strong>Report Status:</strong> {report.status}
-            </p>
+              <p>
+                <strong>Report Status:</strong>{" "}
+                {report.status}
+              </p>
 
-            <p>
-              <strong>Submitted:</strong>{" "}
-              {report.createdAt
-                ? new Date(report.createdAt).toLocaleString()
-                : "Unknown"}
-            </p>
+              <p>
+                <strong>Submitted:</strong>{" "}
+                {formatDate(report.createdAt)}
+              </p>
 
-            {Array.isArray(report.moderationHistory) &&
-              report.moderationHistory.length > 0 && (
-                <section>
-                  <h4>Moderation Audit Trail</h4>
+              {Array.isArray(report.moderationHistory) &&
+                report.moderationHistory.length > 0 && (
+                  <section className="np-admin-history">
+                    <h4>Moderation Audit Trail</h4>
 
-                  {report.moderationHistory.map((entry, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        background: "#f3f4f6",
-                        padding: 10,
-                        marginBottom: 8,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <p>
-                        <strong>Action:</strong> {entry.action}
-                      </p>
-                      <p>
-                        <strong>Admin ID:</strong>{" "}
-                        {String(entry.adminId)}
-                      </p>
-                      <p>
-                        <strong>Time:</strong>{" "}
-                        {entry.timestamp
-                          ? new Date(
-                              entry.timestamp
-                            ).toLocaleString()
-                          : "Unknown"}
-                      </p>
-                      {entry.reason && (
-                        <p>
-                          <strong>Reason:</strong> {entry.reason}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </section>
+                    {report.moderationHistory.map(
+                      (entry, index) => (
+                        <div
+                          key={index}
+                          className="np-admin-history-entry"
+                        >
+                          <p>
+                            <strong>Action:</strong>{" "}
+                            {entry.action}
+                          </p>
+
+                          <p>
+                            <strong>Admin ID:</strong>{" "}
+                            {String(entry.adminId)}
+                          </p>
+
+                          <p>
+                            <strong>Time:</strong>{" "}
+                            {formatDate(entry.timestamp)}
+                          </p>
+
+                          {entry.reason && (
+                            <p>
+                              <strong>Reason:</strong>{" "}
+                              {entry.reason}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </section>
+                )}
+
+              {(report.moderationStatus || "pending") ===
+                "pending" && (
+                <div className="np-admin-actions">
+                  <button
+                    type="button"
+                    disabled={busyId !== null}
+                    onClick={() =>
+                      moderateReport(report._id, "approved")
+                    }
+                    className="np-admin-action approve"
+                  >
+                    {busyId === report._id
+                      ? "Processing..."
+                      : "Approve"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={busyId !== null}
+                    onClick={() =>
+                      moderateReport(report._id, "rejected")
+                    }
+                    className="np-admin-action reject"
+                  >
+                    {busyId === report._id
+                      ? "Processing..."
+                      : "Reject"}
+                  </button>
+                </div>
               )}
-
-            {(report.moderationStatus || "pending") ===
-              "pending" && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  marginTop: 15,
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={busyId !== null}
-                  onClick={() =>
-                    moderateReport(report._id, "approved")
-                  }
-                  style={{
-                    ...styles.button,
-                    background: "#16a34a",
-                    color: "#fff",
-                  }}
-                >
-                  {busyId === report._id
-                    ? "Processing..."
-                    : "Approve"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={busyId !== null}
-                  onClick={() =>
-                    moderateReport(report._id, "rejected")
-                  }
-                  style={{
-                    ...styles.button,
-                    background: "#dc2626",
-                    color: "#fff",
-                  }}
-                >
-                  {busyId === report._id
-                    ? "Processing..."
-                    : "Reject"}
-                </button>
-              </div>
-            )}
-          </article>
-        ))
+            </article>
+          ))}
+        </div>
       )}
     </main>
   );
