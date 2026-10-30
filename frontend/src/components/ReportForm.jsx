@@ -1,42 +1,72 @@
+
 import React, { useState } from "react";
+import "./ReportForm.css";
 import useGeolocation from "../hooks/useGeolocation";
 import { api } from "../api";
-import { enqueueOfflineItem, isOnline } from "../services/offlineQueue";
+import {
+  enqueueOfflineItem,
+  isOnline,
+} from "../services/offlineQueue";
 
-const initialForm = { incidentType: "", location: "", description: "" };
+const initialForm = {
+  incidentType: "",
+  location: "",
+  description: "",
+};
 
-const ReportForm = () => {
+export default function ReportForm() {
   const [formData, setFormData] = useState(initialForm);
   const [incidentCoords, setIncidentCoords] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingGps, setLoadingGps] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
-  const { getCurrentPosition, error: geoError } = useGeolocation();
+
+  const {
+    getCurrentPosition,
+    error: geoError,
+  } = useGeolocation();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Manually editing the location invalidates previously selected GPS coordinates.
-    if (name === "location") setIncidentCoords(null);
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (name === "location") {
+      setIncidentCoords(null);
+    }
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
+
     if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       setStatusMessage("❌ Please select an image file.");
       e.target.value = "";
       return;
     }
+
     if (file.size > 5 * 1024 * 1024) {
       setStatusMessage("❌ Image size must be 5MB or less.");
       e.target.value = "";
       return;
     }
+
     const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result);
-    reader.onerror = () => setStatusMessage("❌ Could not read the image.");
+
+    reader.onload = () => {
+      setImagePreview(reader.result);
+    };
+
+    reader.onerror = () => {
+      setStatusMessage("❌ Could not read the image.");
+    };
+
     reader.readAsDataURL(file);
   };
 
@@ -44,10 +74,13 @@ const ReportForm = () => {
     setLoadingGps(true);
     setStatusMessage("");
     setIncidentCoords(null);
+
     try {
       const coords = await getCurrentPosition();
+
       const lat = Number(coords?.lat);
       const lng = Number(coords?.lng);
+
       if (
         !Number.isFinite(lat) ||
         !Number.isFinite(lng) ||
@@ -58,13 +91,14 @@ const ReportForm = () => {
       ) {
         throw new Error("Invalid GPS coordinates");
       }
+
       setIncidentCoords({ lat, lng });
+
       setFormData((prev) => ({
         ...prev,
         location: `GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
       }));
     } catch (err) {
-      // An IP-based location is approximate and must not be sent as exact GPS.
       setIncidentCoords(null);
       setStatusMessage(
         "❌ GPS unavailable. Please enter the incident location manually."
@@ -74,13 +108,20 @@ const ReportForm = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData(initialForm);
+    setIncidentCoords(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (submitting || loadingGps) return;
+
     setSubmitting(true);
     setStatusMessage("");
 
-    // No identity fields and no automatic geolocation request on submit.
     const payload = {
       incidentType: formData.incidentType,
       location: formData.location.trim(),
@@ -90,15 +131,17 @@ const ReportForm = () => {
     };
 
     try {
-      // Offline → queue locally (US-14 / T-14.2)
       if (!isOnline()) {
-        enqueueOfflineItem({ type: "report", payload });
+        enqueueOfflineItem({
+          type: "report",
+          payload,
+        });
+
         setStatusMessage(
           "📡 You are offline. Report saved locally and will send when internet returns."
         );
-        setFormData(initialForm);
-        setIncidentCoords(null);
-        setImagePreview(null);
+
+        resetForm();
         return;
       }
 
@@ -106,58 +149,71 @@ const ReportForm = () => {
         method: "POST",
         body: JSON.stringify(payload),
       });
+
       setStatusMessage("✅ Report submitted successfully!");
-      setFormData(initialForm);
-      setIncidentCoords(null);
-      setImagePreview(null);
+      resetForm();
     } catch (err) {
-      // Network/API failure → still queue for retry
-      enqueueOfflineItem({ type: "report", payload });
-      setStatusMessage(
-        `📡 ${err.message || "Failed to submit"} — saved offline for automatic retry.`
-      );
-      setFormData(initialForm);
-      setIncidentCoords(null);
-      setImagePreview(null);
+      try {
+        enqueueOfflineItem({
+          type: "report",
+          payload,
+        });
+
+        setStatusMessage(
+          `📡 ${err.message || "Failed to submit"} — saved offline for automatic retry.`
+        );
+
+        resetForm();
+      } catch (queueError) {
+        console.error("Offline queue failed:", queueError);
+
+        setStatusMessage(
+          "❌ Report could not be submitted or saved offline. Please try again."
+        );
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={styles.pageContainer}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>Report an Incident</h2>
-        <p style={styles.subtitle}>
+    <div className="np-report-page">
+      <div className="np-report-card">
+
+        <h2 className="np-report-title">
+          Report an Incident
+        </h2>
+
+        <p className="np-report-subtitle">
           Please provide the details of the incident.
         </p>
 
         {statusMessage && (
           <div
-            style={{
-              ...styles.alertBox,
-              backgroundColor: statusMessage.startsWith("✅")
-                ? "#e8f5e9"
+            role="status"
+            className={`np-report-alert ${
+              statusMessage.startsWith("✅")
+                ? "success"
                 : statusMessage.startsWith("📡")
-                  ? "#f3eefe"
-                  : "#ffebee",
-              color: statusMessage.startsWith("✅")
-                ? "#2e7d32"
-                : statusMessage.startsWith("📡")
-                  ? "#5b2bd9"
-                  : "#c62828",
-            }}
+                ? "offline"
+                : "error"
+            }`}
           >
             {statusMessage}
           </div>
         )}
 
-        {geoError && <p style={styles.errorText}>{geoError}</p>}
+        {geoError && (
+          <p className="np-report-error">
+            {geoError}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit}>
+
           {/* INCIDENT TYPE */}
-          <div style={styles.fieldGroup}>
-            <label htmlFor="incidentType" style={styles.label}>
+          <div className="np-report-field">
+            <label htmlFor="incidentType">
               Incident Type
             </label>
 
@@ -167,24 +223,35 @@ const ReportForm = () => {
               value={formData.incidentType}
               onChange={handleChange}
               required
-              style={styles.selectInput}
             >
-              <option value="">Select incident type</option>
-              <option value="harassment">Harassment</option>
-              <option value="stalking">Stalking</option>
-              <option value="theft">Theft / Snatching</option>
-              <option value="unsafe-area">Unsafe Area</option>
-              <option value="other">Other</option>
+              <option value="">
+                Select incident type
+              </option>
+              <option value="harassment">
+                Harassment
+              </option>
+              <option value="stalking">
+                Stalking
+              </option>
+              <option value="theft">
+                Theft / Snatching
+              </option>
+              <option value="unsafe-area">
+                Unsafe Area
+              </option>
+              <option value="other">
+                Other
+              </option>
             </select>
           </div>
 
           {/* LOCATION */}
-          <div style={styles.fieldGroup}>
-            <label htmlFor="location" style={styles.label}>
+          <div className="np-report-field">
+            <label htmlFor="location">
               Location
             </label>
 
-            <div style={styles.locationContainer}>
+            <div className="np-report-location">
               <input
                 type="text"
                 id="location"
@@ -193,35 +260,35 @@ const ReportForm = () => {
                 value={formData.location}
                 onChange={handleChange}
                 required
-                style={styles.locationInput}
               />
 
               <button
                 type="button"
+                className="np-report-gps"
                 onClick={handleGetLocation}
                 disabled={loadingGps || submitting}
-                style={{
-                  ...styles.gpsButton,
-                  backgroundColor: loadingGps ? "#e0d6f2" : "#f2ebf9",
-                }}
                 title="Use current location as incident location"
               >
-                {loadingGps ? "⌛ Fetching..." : "📍 GPS"}
+                {loadingGps
+                  ? "⌛ Fetching..."
+                  : "📍 GPS"}
               </button>
             </div>
 
-            <p style={styles.helperText}>
-              🔒 Anonymous Report: Your name, email, phone number, and travel
-              history will not be attached to this report. GPS location is
-              optional. If you use GPS, your coordinates will be included in the
-              report. Please avoid including personal information in the
-              description.
+            <p className="np-report-helper">
+              🔒 Anonymous Report: Your name, email,
+              phone number, and travel history will not
+              be attached to this report. GPS location
+              is optional. If you use GPS, your
+              coordinates will be included in the
+              report. Please avoid including personal
+              information in the description.
             </p>
           </div>
 
           {/* DESCRIPTION */}
-          <div style={styles.fieldGroup}>
-            <label htmlFor="description" style={styles.label}>
+          <div className="np-report-field">
+            <label htmlFor="description">
               Description (Optional)
             </label>
 
@@ -229,21 +296,25 @@ const ReportForm = () => {
               id="description"
               name="description"
               placeholder="Describe what happened (optional)..."
-              rows="4"
+              rows={4}
               value={formData.description}
               onChange={handleChange}
-              style={styles.textareaInput}
             />
           </div>
 
           {/* IMAGE PREVIEW */}
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Attach Image (Preview Only)</label>
+          <div className="np-report-field">
+            <label>
+              Attach Image (Preview Only)
+            </label>
 
             {!imagePreview ? (
-              <label style={styles.uploadBox}>
-                <span style={{ fontSize: "20px" }}>📷</span>
-                <span style={{ fontSize: "13px", color: "#6b46c1" }}>
+              <label className="np-report-upload">
+                <span className="np-report-camera">
+                  📷
+                </span>
+
+                <span>
                   Click to select image
                 </span>
 
@@ -251,223 +322,45 @@ const ReportForm = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
-                  style={{ display: "none" }}
+                  className="np-report-file-input"
                 />
               </label>
             ) : (
-              <div style={styles.previewContainer}>
+              <div className="np-report-preview">
                 <img
                   src={imagePreview}
                   alt="Incident Preview"
-                  style={styles.previewImage}
                 />
 
                 <button
                   type="button"
+                  className="np-report-remove"
                   onClick={() => setImagePreview(null)}
-                  style={styles.removeImageBtn}
+                  aria-label="Remove selected image"
                 >
                   ✕
                 </button>
               </div>
             )}
 
-            <p style={styles.helperText}>Image attachment is not saved yet.</p>
+            <p className="np-report-helper">
+              Image attachment is not saved yet.
+            </p>
           </div>
 
           {/* SUBMIT */}
           <button
             type="submit"
+            className="np-report-submit"
             disabled={submitting || loadingGps}
-            style={styles.submitButton}
           >
-            {submitting ? "Submitting..." : "Submit Report"}
+            {submitting
+              ? "Submitting..."
+              : "Submit Report"}
           </button>
+
         </form>
       </div>
     </div>
   );
-};
-
-// STYLES
-const styles = {
-  pageContainer: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f7f4fb",
-    padding: "20px",
-    boxSizing: "border-box",
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: "24px",
-    padding: "32px 28px",
-    maxWidth: "440px",
-    width: "100%",
-    boxShadow: "0 12px 32px rgba(107, 70, 193, 0.08)",
-    border: "1px solid #efe8f8",
-    boxSizing: "border-box",
-  },
-
-  title: {
-    margin: "0 0 6px 0",
-    color: "#2d1a47",
-    fontSize: "22px",
-    fontWeight: "700",
-  },
-
-  subtitle: {
-    margin: "0 0 20px 0",
-    color: "#7e6c9c",
-    fontSize: "13px",
-  },
-
-  alertBox: {
-    padding: "10px 14px",
-    borderRadius: "12px",
-    marginBottom: "16px",
-    fontSize: "13px",
-    fontWeight: "600",
-  },
-
-  errorText: {
-    fontSize: "12px",
-    color: "#d32f2f",
-    marginBottom: "10px",
-  },
-
-  fieldGroup: {
-    marginBottom: "16px",
-    textAlign: "left",
-  },
-
-  label: {
-    display: "block",
-    marginBottom: "6px",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#4a2c85",
-  },
-
-  selectInput: {
-    width: "100%",
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "1px solid #e5dcf2",
-    backgroundColor: "#faf8fc",
-    fontSize: "14px",
-    color: "#2d1a47",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  locationContainer: {
-    display: "flex",
-    gap: "8px",
-  },
-
-  locationInput: {
-    flex: 1,
-    minWidth: 0,
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "1px solid #e5dcf2",
-    backgroundColor: "#faf8fc",
-    fontSize: "14px",
-    color: "#2d1a47",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  gpsButton: {
-    padding: "0 14px",
-    borderRadius: "12px",
-    border: "1px solid #e5dcf2",
-    color: "#5e35b1",
-    fontWeight: "700",
-    fontSize: "13px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-
-  textareaInput: {
-    width: "100%",
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "1px solid #e5dcf2",
-    backgroundColor: "#faf8fc",
-    fontSize: "14px",
-    color: "#2d1a47",
-    outline: "none",
-    resize: "none",
-    boxSizing: "border-box",
-  },
-
-  uploadBox: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    padding: "14px",
-    border: "2px dashed #d6c7ee",
-    borderRadius: "14px",
-    backgroundColor: "#faf8fc",
-    cursor: "pointer",
-  },
-
-  previewContainer: {
-    position: "relative",
-    width: "100%",
-    maxHeight: "160px",
-    borderRadius: "14px",
-    overflow: "hidden",
-    border: "1px solid #e5dcf2",
-  },
-
-  previewImage: {
-    width: "100%",
-    height: "160px",
-    objectFit: "cover",
-  },
-
-  removeImageBtn: {
-    position: "absolute",
-    top: "8px",
-    right: "8px",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "50%",
-    width: "26px",
-    height: "26px",
-    cursor: "pointer",
-    fontSize: "12px",
-  },
-
-  helperText: {
-    marginTop: "6px",
-    color: "#7e6c9c",
-    fontSize: "11px",
-  },
-
-  submitButton: {
-    width: "100%",
-    backgroundColor: "#5e35b1",
-    color: "#ffffff",
-    padding: "14px",
-    fontSize: "15px",
-    fontWeight: "700",
-    border: "none",
-    borderRadius: "14px",
-    cursor: "pointer",
-    marginTop: "10px",
-    boxShadow: "0 6px 18px rgba(94, 53, 177, 0.2)",
-  },
-};
-
-export default ReportForm;
+}

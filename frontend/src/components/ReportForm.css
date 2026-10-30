@@ -1,0 +1,317 @@
+
+/* =========================================
+   NIRAPOD POTH - REPORT FORM
+   Original desktop design + Mobile responsive
+========================================= */
+
+.np-report-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7f4fb;
+  padding: 20px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+}
+
+.np-report-page *,
+.np-report-page *::before,
+.np-report-page *::after {
+  box-sizing: border-box;
+}
+
+.np-report-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px 28px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(107,70,193,.08);
+  border: 1px solid #efe8f8;
+  min-width: 0;
+}
+
+.np-report-title {
+  margin: 0 0 6px;
+  color: #2d1a47;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.np-report-subtitle {
+  margin: 0 0 20px;
+  color: #7e6c9c;
+  font-size: 13px;
+}
+
+.np-report-field {
+  margin-bottom: 16px;
+  text-align: left;
+  min-width: 0;
+}
+
+.np-report-field > label:not(.np-report-upload) {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a2c85;
+}
+
+.np-report-field select,
+.np-report-field input[type="text"],
+.np-report-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e5dcf2;
+  background: #faf8fc;
+  font-size: 14px;
+  color: #2d1a47;
+  outline: none;
+  font-family: inherit;
+}
+
+.np-report-field textarea {
+  resize: none;
+}
+
+.np-report-field select:focus-visible,
+.np-report-field input:focus-visible,
+.np-report-field textarea:focus-visible {
+  outline: 2px solid #8854dc;
+  outline-offset: 2px;
+}
+
+.np-report-location {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.np-report-location input {
+  flex: 1;
+  min-width: 0;
+}
+
+.np-report-gps {
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #e5dcf2;
+  background: #f2ebf9;
+  color: #5e35b1;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.np-report-gps:disabled {
+  background: #e0d6f2;
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.np-report-helper {
+  margin-top: 6px;
+  color: #7e6c9c;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.np-report-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border: 2px dashed #d6c7ee;
+  border-radius: 14px;
+  background: #faf8fc;
+  cursor: pointer;
+  color: #6b46c1;
+  font-size: 13px;
+}
+
+.np-report-camera {
+  font-size: 20px;
+}
+
+.np-report-file-input {
+  display: none;
+}
+
+.np-report-preview {
+  position: relative;
+  width: 100%;
+  max-height: 160px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e5dcf2;
+}
+
+.np-report-preview img {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+.np-report-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.np-report-submit {
+  width: 100%;
+  background: #5e35b1;
+  color: #ffffff;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  margin-top: 10px;
+  box-shadow: 0 6px 18px rgba(94,53,177,.2);
+}
+
+.np-report-submit:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.np-report-alert {
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.np-report-alert.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.np-report-alert.offline {
+  background: #f3eefe;
+  color: #5b2bd9;
+}
+
+.np-report-alert.error {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.np-report-error {
+  font-size: 12px;
+  color: #d32f2f;
+  margin-bottom: 10px;
+}
+
+/* =========================================
+   MOBILE RESPONSIVE
+========================================= */
+
+@media (max-width: 650px) {
+  .np-report-page {
+    width: 100%;
+    min-height: 100dvh;
+    padding: 20px 13px 110px;
+    align-items: flex-start;
+    overflow-x: clip;
+  }
+
+  .np-report-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 18px;
+    margin: 0 auto;
+    border-radius: 22px;
+  }
+
+  .np-report-title {
+    font-size: 21px;
+    line-height: 1.3;
+  }
+
+  .np-report-subtitle {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .np-report-field input[type="text"],
+  .np-report-field select,
+  .np-report-field textarea {
+    font-size: 16px;
+    max-width: 100%;
+  }
+
+  .np-report-location {
+    flex-wrap: wrap;
+  }
+
+  .np-report-location input {
+    flex: 1 1 150px;
+  }
+
+  .np-report-gps {
+    min-height: 44px;
+  }
+
+  .np-report-field textarea {
+    min-height: 110px;
+  }
+
+  .np-report-submit {
+    min-height: 48px;
+  }
+}
+
+/* =========================================
+   SMALL MOBILE: 320px - 375px
+========================================= */
+
+@media (max-width: 375px) {
+  .np-report-page {
+    padding: 16px 10px 105px;
+  }
+
+  .np-report-card {
+    padding: 20px 14px;
+    border-radius: 20px;
+  }
+
+  .np-report-title {
+    font-size: 20px;
+  }
+
+  .np-report-location input {
+    flex-basis: 100%;
+  }
+
+  .np-report-gps {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .np-report-upload {
+    flex-wrap: wrap;
+    text-align: center;
+  }
+}
