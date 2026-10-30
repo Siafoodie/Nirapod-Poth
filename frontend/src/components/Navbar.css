@@ -551,3 +551,100 @@
   border-top: none;
   margin-top: 0;
 }
+/* ======================================
+   NIRAPOD POTH MOBILE BOTTOM NAVIGATION
+====================================== */
+
+.np-mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .np-mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+
+    width: 100%;
+    min-height: 68px;
+
+    padding: 8px 4px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+
+    background: linear-gradient(
+      120deg,
+      #1c1035,
+      #38205e,
+      #24133f
+    );
+
+    border-top: 1px solid rgba(200, 160, 255, 0.3);
+
+    box-shadow: 0 -5px 25px rgba(24, 9, 47, 0.25);
+  }
+
+  .np-mobile-nav-item {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 5px 2px;
+
+    color: #c7b5df;
+    text-decoration: none;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    transition: color 0.2s ease;
+  }
+
+  .np-mobile-nav-item span {
+    white-space: nowrap;
+  }
+
+  .np-mobile-nav-item.active {
+    color: #ffffff;
+  }
+
+  .np-mobile-nav-item.active svg {
+    color: #d5a8ff;
+    filter: drop-shadow(0 0 5px rgba(195, 135, 255, 0.6));
+  }
+
+  .np-mobile-nav-item:focus-visible {
+    outline: 2px solid #d5a8ff;
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
+
+  body {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  .np-nav-sidebar {
+    max-height: calc(100dvh - 175px);
+  }
+}
+
+@media (max-width: 360px) {
+  .np-mobile-nav-item {
+    font-size: 9px;
+  }
+
+  .np-mobile-nav-item svg {
+    width: 20px;
+    height: 20px;
+  }
+}
