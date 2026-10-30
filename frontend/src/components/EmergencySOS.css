@@ -1,0 +1,450 @@
+
+/* =========================================
+   NIRAPOD POTH - RESPONSIVE EMERGENCY SOS
+========================================= */
+
+.np-sos-page {
+  width: 100%;
+  min-height: 100%;
+  padding: 28px 20px 110px;
+  background: #faf7ff;
+  box-sizing: border-box;
+}
+
+.np-sos-container {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* Heading */
+
+.np-sos-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.np-sos-heading-icon {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #ede3ff;
+  color: #6d28d9;
+}
+
+.np-sos-heading h1 {
+  margin: 0 0 5px;
+  font-size: 25px;
+  font-weight: 800;
+  color: #241044;
+}
+
+.np-sos-heading p {
+  margin: 0;
+  color: #77668e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Emergency Card */
+
+.np-sos-card {
+  padding: 30px 25px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #eee5fa;
+  box-shadow: 0 12px 35px rgba(56, 24, 100, 0.07);
+  text-align: center;
+}
+
+.np-sos-alert-icon {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: #fce7ed;
+  color: #e11d48;
+}
+
+.np-sos-card h2 {
+  margin: 0 0 10px;
+  color: #23123f;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.np-sos-description {
+  max-width: 350px;
+  margin: 0 auto 24px;
+  color: #786b8c;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Primary SOS Button */
+
+.np-sos-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px;
+  padding: 16px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #dc2450, #b91c45);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(220, 36, 80, 0.2);
+}
+
+.np-sos-primary:active {
+  transform: scale(0.98);
+}
+
+.np-sos-note {
+  margin: 13px 0 0;
+  color: #84778f;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.np-sos-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.np-sos-status svg {
+  flex-shrink: 0;
+}
+
+.np-sos-status.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.np-sos-status.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Sections */
+
+.np-sos-section {
+  margin-top: 28px;
+}
+
+.np-sos-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  color: #6d28d9;
+}
+
+.np-sos-section-title h2 {
+  margin: 0;
+  color: #241044;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* Helplines */
+
+.np-sos-helplines {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.np-sos-call-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 85px;
+  padding: 14px;
+  border: 1px solid #e9def7;
+  border-radius: 17px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.np-sos-call-icon {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.np-sos-call-button > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.np-sos-call-button strong,
+.np-sos-call-button small {
+  display: block;
+}
+
+.np-sos-call-button strong {
+  color: #32165c;
+  font-size: 18px;
+}
+
+.np-sos-call-button small {
+  color: #81718f;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.np-sos-call-label {
+  color: #6d28d9;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Live Location */
+
+.np-sos-live-card {
+  padding: 22px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e9def7;
+}
+
+.np-sos-live-description {
+  margin: 0 0 17px;
+  color: #796a8e;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.np-sos-live-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 50px;
+  padding: 13px;
+  border: none;
+  border-radius: 13px;
+  background: #693ed8;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.np-sos-sharing-active {
+  padding: 15px;
+  border-radius: 14px;
+  background: #f8f5ff;
+}
+
+.np-sos-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.np-sos-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.np-sos-sharing-active p {
+  color: #665579;
+  font-size: 12px;
+}
+
+.np-sos-share-link {
+  padding: 12px;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid #e4d8f5;
+  color: #4c1d95;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.np-sos-share-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.np-sos-share-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #ddd6fe;
+  background: white;
+  color: #5b21b6;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.np-sos-stop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 14px;
+  border: 1px solid #fecdd3;
+  border-radius: 11px;
+  background: #fff1f2;
+  color: #be123c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.np-sos-live-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.np-sos-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 28px;
+  color: #88769d;
+  font-size: 12px;
+}
+
+/* =========================================
+   MOBILE RESPONSIVE
+========================================= */
+
+@media (max-width: 600px) {
+  .np-sos-page {
+    padding: 18px 16px
+      calc(105px + env(safe-area-inset-bottom));
+  }
+
+  .np-sos-heading {
+    margin-bottom: 18px;
+  }
+
+  .np-sos-heading-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .np-sos-heading h1 {
+    font-size: 22px;
+  }
+
+  .np-sos-card {
+    padding: 22px 16px;
+    border-radius: 19px;
+  }
+
+  .np-sos-alert-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 14px;
+  }
+
+  .np-sos-card h2 {
+    font-size: 19px;
+  }
+
+  .np-sos-description {
+    margin-bottom: 18px;
+  }
+
+  .np-sos-primary {
+    min-height: 60px;
+    font-size: 13px;
+  }
+
+  .np-sos-section {
+    margin-top: 23px;
+  }
+
+  .np-sos-helplines {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .np-sos-call-button {
+    min-height: 67px;
+  }
+
+  .np-sos-live-card {
+    padding: 17px;
+  }
+}
+
+@media (max-width: 360px) {
+  .np-sos-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .np-sos-card {
+    padding: 19px 13px;
+  }
+
+  .np-sos-heading h1 {
+    font-size: 20px;
+  }
+}
+
+/* Accessibility */
+
+.np-sos-page button:focus-visible {
+  outline: 3px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .np-sos-page button {
+    transition: none;
+  }
+}

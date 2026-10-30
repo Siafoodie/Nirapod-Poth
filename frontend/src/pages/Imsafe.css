@@ -599,3 +599,221 @@
     transition: none;
   }
 }
+
+/* ==========================================
+   I'M SAFE - MOBILE RESPONSIVE FIXES ONLY
+   Existing desktop design remains unchanged
+========================================== */
+
+@media (max-width: 600px) {
+
+  .imsafe-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-bottom: calc(115px + env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
+
+  /* Hero - preserve original design */
+  .imsafe-hero {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .imsafe-hero h1 {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  .imsafe-hero p {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  .imsafe-hero-badge {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Trusted Contacts */
+  .imsafe-section {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .imsafe-section-heading {
+    min-width: 0;
+  }
+
+  .imsafe-section-heading > div:last-child {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .imsafe-section-heading h2,
+  .imsafe-section-heading p {
+    overflow-wrap: break-word;
+  }
+
+  .imsafe-selection-info {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .imsafe-contacts {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .imsafe-contact-card {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .imsafe-contact-details {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .imsafe-contact-details strong,
+  .imsafe-contact-details span {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Location Toggle */
+  .imsafe-location-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .imsafe-location-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .imsafe-location-text {
+    min-width: 0;
+  }
+
+  .imsafe-location-text h2,
+  .imsafe-location-text p {
+    overflow-wrap: break-word;
+  }
+
+  .imsafe-switch {
+    flex-shrink: 0;
+  }
+
+  /* Message Preview */
+  .imsafe-preview,
+  .imsafe-location-note,
+  .imsafe-status {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+
+  /* Send Button */
+  .imsafe-send-button {
+    width: 100%;
+    max-width: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Footer */
+  .imsafe-footer,
+  .imsafe-sms-note {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Extra-small mobile screens */
+@media (max-width: 360px) {
+
+  .imsafe-hero {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .imsafe-section-heading {
+    gap: 10px;
+  }
+
+  .imsafe-contact-card {
+    gap: 8px;
+  }
+}
+
+
+/* ==========================================
+   I'M SAFE - MOBILE POSITIONING FIX
+   No desktop design changes
+========================================== */
+
+@media (max-width: 600px) {
+
+  .imsafe-page {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding-top: 16px;
+    padding-bottom: calc(
+      115px + env(safe-area-inset-bottom)
+    );
+    box-sizing: border-box;
+  }
+
+  .imsafe-hero {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0;
+    padding: 30px 16px;
+    box-sizing: border-box;
+  }
+
+  .imsafe-check-wrapper {
+    margin-top: 24px;
+    margin-bottom: 24px;
+  }
+
+  .imsafe-section {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .imsafe-preview,
+  .imsafe-contact-card,
+  .imsafe-location-note {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 360px) {
+  .imsafe-page {
+    padding-top: 12px;
+  }
+
+  .imsafe-hero {
+    padding: 25px 12px;
+  }
+}
