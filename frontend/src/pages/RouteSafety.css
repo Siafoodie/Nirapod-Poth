@@ -528,3 +528,353 @@
     transition: none;
   }
 }
+
+/* =========================================
+   ROUTE SAFETY - MOBILE RESPONSIVE FIX
+   Keep existing desktop design unchanged
+========================================= */
+
+.rs-page,
+.rs-container,
+.rs-hero,
+.rs-controls,
+.rs-route-card {
+  box-sizing: border-box;
+}
+
+.rs-container {
+  width: 100%;
+  min-width: 0;
+}
+
+.rs-route-card,
+.rs-score-panel,
+.rs-breakdown,
+.rs-filter,
+.rs-route-identity {
+  min-width: 0;
+}
+
+@media (max-width: 650px) {
+
+  .rs-page {
+    width: 100%;
+    min-width: 0;
+    padding: 18px 12px 110px;
+    overflow-x: clip;
+  }
+
+  .rs-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Hero Section */
+
+  .rs-hero {
+    width: 100%;
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
+
+  .rs-hero h1 {
+    font-size: clamp(25px, 7vw, 32px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .rs-hero p {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .rs-eyebrow {
+    font-size: 10px;
+    letter-spacing: 1px;
+    flex-wrap: wrap;
+  }
+
+  .rs-hero-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .rs-hero-stat {
+    width: 100%;
+    padding: 13px 14px;
+  }
+
+  .rs-hero-decoration {
+    right: 10px;
+    top: 20px;
+    pointer-events: none;
+  }
+
+  /* Filters */
+
+  .rs-controls {
+    margin-top: 20px;
+    padding: 18px 15px;
+    border-radius: 17px;
+  }
+
+  .rs-controls-title {
+    font-size: 15px;
+    flex-wrap: wrap;
+  }
+
+  .rs-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .rs-filter {
+    width: 100%;
+  }
+
+  .rs-filter label {
+    font-size: 13px;
+  }
+
+  .rs-filter select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    font-size: 16px;
+    padding: 12px;
+  }
+
+  /* Context Notice */
+
+  .rs-context-notice {
+    padding: 14px;
+    margin: 18px 0 26px;
+    font-size: 13px;
+    line-height: 1.6;
+    align-items: flex-start;
+  }
+
+  .rs-context-notice svg {
+    flex-shrink: 0;
+  }
+
+  /* Results */
+
+  .rs-results-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .rs-results-header h2 {
+    font-size: 23px;
+  }
+
+  .rs-results-header p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .rs-results-count {
+    font-size: 12px;
+    padding: 8px 13px;
+  }
+
+  /* Route Cards */
+
+  .rs-route-list {
+    gap: 16px;
+  }
+
+  .rs-route-card {
+    width: 100%;
+    padding: 17px 14px;
+    border-radius: 18px;
+  }
+
+  .rs-card-top {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .rs-route-identity {
+    gap: 10px;
+    flex: 1 1 160px;
+  }
+
+  .rs-route-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .rs-route-identity h3 {
+    font-size: 19px;
+    overflow-wrap: anywhere;
+  }
+
+  .rs-safety-badge {
+    font-size: 10px;
+    padding: 8px 11px;
+    max-width: 100%;
+  }
+
+  /* Route Path */
+
+  .rs-route-path {
+    gap: 8px;
+    margin-top: 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .rs-route-path strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .rs-route-path svg {
+    flex-shrink: 0;
+  }
+
+  .rs-route-meta {
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  /* Safety Score */
+
+  .rs-score-panel {
+    padding: 15px 12px;
+    margin-top: 18px;
+  }
+
+  .rs-score-top {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .rs-score-top > div {
+    min-width: 0;
+  }
+
+  .rs-score-label {
+    font-size: 13px;
+  }
+
+  .rs-score-top small {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .rs-score-value {
+    font-size: 19px;
+    white-space: nowrap;
+  }
+
+  .rs-details-btn {
+    min-height: 46px;
+    padding: 12px 10px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+
+  /* Expanded Breakdown */
+
+  .rs-breakdown {
+    padding: 16px 12px;
+    margin-top: 16px;
+  }
+
+  .rs-breakdown h4 {
+    font-size: 16px;
+  }
+
+  .rs-factor-list {
+    gap: 17px;
+  }
+
+  .rs-factor-top {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .rs-factor-top span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .rs-factor-top strong {
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .rs-breakdown-note,
+  .rs-footer-note {
+    padding: 13px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .rs-breakdown-note svg,
+  .rs-footer-note svg {
+    flex-shrink: 0;
+  }
+}
+
+/* Extra Small Phones */
+
+@media (max-width: 360px) {
+
+  .rs-page {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+
+  .rs-hero {
+    padding: 24px 16px;
+  }
+
+  .rs-hero h1 {
+    font-size: 24px;
+  }
+
+  .rs-route-card {
+    padding: 14px 11px;
+  }
+
+  .rs-score-value {
+    font-size: 17px;
+  }
+
+  .rs-factor-top {
+    flex-wrap: wrap;
+  }
+}
+
+/* Tablet */
+
+@media (min-width: 651px) and (max-width: 1024px) {
+
+  .rs-page {
+    padding: 28px 20px 90px;
+  }
+
+  .rs-hero {
+    padding: 36px 30px;
+  }
+
+  .rs-route-card {
+    padding: 22px;
+  }
+
+  .rs-filter-grid {
+    gap: 15px;
+  }
+}

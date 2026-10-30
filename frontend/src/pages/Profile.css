@@ -271,12 +271,301 @@
   }
 }
 
-@media (max-width: 600px) {
-  .np-profile-heading h1 {
-    font-size: 26px;
+
+/* =========================================
+   NIRAPOD POTH - PROFILE MOBILE RESPONSIVE
+   Existing desktop design remains unchanged
+========================================= */
+
+.np-profile-page,
+.np-profile-container,
+.np-profile-main-card,
+.np-profile-form,
+.np-profile-options {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Tablet */
+
+@media (max-width: 768px) {
+  .np-profile-page {
+    padding: 28px 20px 110px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .np-profile-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .np-profile-main-card {
+    width: 100%;
   }
 
   .np-profile-form {
-    padding: 18px;
+    padding: 22px;
+  }
+
+  .np-profile-identity h2,
+  .np-profile-identity p {
+    overflow-wrap: anywhere;
   }
 }
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .np-profile-page {
+    min-height: 100dvh;
+    width: 100%;
+    padding: 24px 16px calc(115px + env(safe-area-inset-bottom, 0px));
+    overflow-x: clip;
+  }
+
+  .np-profile-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Heading */
+
+  .np-profile-heading {
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+
+  .np-profile-heading > div {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .np-profile-heading h1 {
+    font-size: 26px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .np-profile-heading p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .np-profile-heading > svg {
+    flex-shrink: 0;
+  }
+
+  /* Main Card */
+
+  .np-profile-main-card {
+    width: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .np-profile-cover {
+    height: 120px;
+  }
+
+  /* Avatar */
+
+  .np-profile-avatar-wrapper {
+    width: 104px;
+    margin: -50px auto 0;
+  }
+
+  .np-profile-avatar-large {
+    width: 104px;
+    height: 104px;
+    box-sizing: border-box;
+  }
+
+  .np-profile-camera {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Profile Identity */
+
+  .np-profile-identity {
+    padding: 12px 16px 22px;
+  }
+
+  .np-profile-identity h2 {
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .np-profile-identity p {
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  /* Form */
+
+  .np-profile-form {
+    width: 100%;
+    padding: 18px 16px;
+  }
+
+  .np-profile-form-heading {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .np-profile-form-heading h3 {
+    font-size: 16px;
+    min-width: 0;
+  }
+
+  .np-profile-edit-btn {
+    flex-shrink: 0;
+    padding: 10px 13px;
+    font-size: 13px;
+  }
+
+  .np-profile-field {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 17px;
+  }
+
+  .np-profile-field label {
+    font-size: 13px;
+  }
+
+  .np-profile-field input {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 13px 12px;
+    font-size: 16px;
+  }
+
+  /* Form Buttons */
+
+  .np-profile-form-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .np-profile-cancel-btn,
+  .np-profile-save-btn {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    padding: 12px 10px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  /* Account Options */
+
+  .np-profile-options {
+    width: 100%;
+    margin-top: 22px;
+  }
+
+  .np-profile-options h3 {
+    font-size: 17px;
+  }
+
+  .np-profile-option {
+    width: 100%;
+    min-width: 0;
+    gap: 12px;
+    padding: 17px 15px;
+    border-radius: 15px;
+  }
+
+  .np-profile-option span {
+    min-width: 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .np-profile-option svg {
+    flex-shrink: 0;
+  }
+
+  /* Sign Out */
+
+  .np-profile-signout {
+    width: 100%;
+    margin-top: 24px;
+    padding: 15px;
+    font-size: 14px;
+  }
+
+  /* Notifications */
+
+  .np-profile-alert {
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Small Mobile - 320px to 375px */
+
+@media (max-width: 375px) {
+  .np-profile-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .np-profile-heading h1 {
+    font-size: 23px;
+  }
+
+  .np-profile-heading p {
+    font-size: 12px;
+  }
+
+  .np-profile-form {
+    padding: 16px 12px;
+  }
+
+  .np-profile-form-heading h3 {
+    font-size: 14px;
+  }
+
+  .np-profile-edit-btn {
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+
+  .np-profile-identity h2 {
+    font-size: 20px;
+  }
+
+  .np-profile-option {
+    padding: 15px 12px;
+  }
+
+  .np-profile-cancel-btn,
+  .np-profile-save-btn {
+    font-size: 12px;
+    gap: 5px;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .np-profile-option {
+    transition: none;
+  }
+
+  .np-profile-spinner {
+    animation: none;
+  }
+}
+
