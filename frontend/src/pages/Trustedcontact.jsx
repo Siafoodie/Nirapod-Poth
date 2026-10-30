@@ -29,16 +29,22 @@ export default function TrustedContacts() {
 
       const data = Array.isArray(response)
         ? response
-        : response?.contacts ?? response?.data?.contacts ?? response?.data;
+        : response?.contacts ??
+          response?.data?.contacts ??
+          response?.data;
 
       if (!Array.isArray(data)) {
-        throw new Error("The contacts API returned an invalid response.");
+        throw new Error(
+          "The contacts API returned an invalid response."
+        );
       }
 
       setContacts(data);
     } catch (error) {
       console.error("Failed to load contacts:", error);
-      setLoadError(error.message || "Failed to load contacts.");
+      setLoadError(
+        error.message || "Failed to load contacts."
+      );
     } finally {
       setLoading(false);
     }
@@ -126,7 +132,9 @@ export default function TrustedContacts() {
       await loadContacts();
     } catch (error) {
       console.error("Failed to save contact:", error);
-      setActionError(error.message || "Failed to save contact.");
+      setActionError(
+        error.message || "Failed to save contact."
+      );
     } finally {
       setSaving(false);
     }
@@ -148,11 +156,15 @@ export default function TrustedContacts() {
       });
 
       setContacts((previous) =>
-        previous.filter((item) => item._id !== contact._id)
+        previous.filter(
+          (item) => item._id !== contact._id
+        )
       );
     } catch (error) {
       console.error("Failed to delete contact:", error);
-      setActionError(error.message || "Failed to delete contact.");
+      setActionError(
+        error.message || "Failed to delete contact."
+      );
     } finally {
       setDeletingId(null);
     }
@@ -172,16 +184,160 @@ export default function TrustedContacts() {
         </button>
       }
     >
-      <div style={styles.page}>
+      <style>
+        {`
+          .trusted-page {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 12px 16px 110px;
+            box-sizing: border-box;
+            font-family: Inter, system-ui, sans-serif;
+            min-width: 0;
+          }
+
+          .trusted-page *,
+          .trusted-modal * {
+            box-sizing: border-box;
+          }
+
+          .trusted-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: #ffffff;
+            border: 1px solid #eee7fc;
+            border-radius: 18px;
+            padding: 18px 20px;
+            box-shadow: 0 6px 22px rgba(99,57,166,0.055);
+            min-width: 0;
+          }
+
+          .trusted-card-main {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1 1 220px;
+            min-width: 0;
+          }
+
+          .trusted-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+
+          .trusted-name-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .trusted-modal {
+            width: 100%;
+            max-width: 460px;
+            max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            background: #ffffff;
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: 0 24px 70px rgba(22,12,45,0.25);
+            min-width: 0;
+          }
+
+          .trusted-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+          }
+
+          @media (max-width: 600px) {
+            .trusted-page {
+              padding: 12px 14px 120px;
+            }
+
+            .trusted-card {
+              padding: 16px;
+              gap: 14px;
+              border-radius: 18px;
+            }
+
+            .trusted-card-main {
+              flex: 1 1 100%;
+              width: 100%;
+            }
+
+            .trusted-actions {
+              width: 100%;
+              justify-content: flex-start;
+            }
+
+            .trusted-actions button {
+              min-height: 44px;
+            }
+
+            .trusted-modal {
+              padding: 22px 18px;
+              border-radius: 18px;
+            }
+
+            .trusted-modal-actions {
+              flex-wrap: wrap;
+            }
+
+            .trusted-modal-actions button {
+              flex: 1 1 auto;
+              min-height: 44px;
+            }
+          }
+
+          @media (max-width: 360px) {
+            .trusted-page {
+              padding-left: 10px;
+              padding-right: 10px;
+            }
+
+            .trusted-card {
+              padding: 14px 12px;
+            }
+
+            .trusted-card-main {
+              gap: 10px;
+            }
+
+            .trusted-actions button {
+              flex: 1;
+            }
+
+            .trusted-modal {
+              padding: 18px 14px;
+            }
+          }
+        `}
+      </style>
+
+      <div className="trusted-page">
         <div style={styles.intro}>
           <div style={styles.introIcon}>🛡️</div>
-          <h2 style={styles.heading}>Your Trusted Circle</h2>
+
+          <h2 style={styles.heading}>
+            Your Trusted Circle
+          </h2>
+
           <p style={styles.subtitle}>
             Keep your closest people connected for extra safety.
           </p>
+
           <div style={styles.countBadge}>
             {contacts.length} Trusted{" "}
-            {contacts.length === 1 ? "Contact" : "Contacts"}
+            {contacts.length === 1
+              ? "Contact"
+              : "Contacts"}
           </div>
         </div>
 
@@ -192,12 +348,15 @@ export default function TrustedContacts() {
         )}
 
         {loading && (
-          <p style={styles.message}>Loading trusted contacts...</p>
+          <p style={styles.message}>
+            Loading trusted contacts...
+          </p>
         )}
 
         {!loading && loadError && (
           <div role="alert" style={styles.error}>
             {loadError}
+
             <button
               type="button"
               onClick={() => {
@@ -211,19 +370,26 @@ export default function TrustedContacts() {
           </div>
         )}
 
-        {!loading && !loadError && contacts.length === 0 && (
-          <div style={styles.emptyState}>
-            <div style={{ fontSize: 44 }}>👥</div>
-            <h3>No trusted contacts yet</h3>
-            <p>Add someone you trust to get started.</p>
-          </div>
-        )}
+        {!loading &&
+          !loadError &&
+          contacts.length === 0 && (
+            <div style={styles.emptyState}>
+              <div style={{ fontSize: 44 }}>👥</div>
+              <h3>No trusted contacts yet</h3>
+              <p>
+                Add someone you trust to get started.
+              </p>
+            </div>
+          )}
 
         {!loading && !loadError && (
           <div style={styles.list}>
             {contacts.map((contact) => (
-              <div key={contact._id} style={styles.card}>
-                <div style={styles.cardMain}>
+              <div
+                key={contact._id}
+                className="trusted-card"
+              >
+                <div className="trusted-card-main">
                   <div style={styles.avatar}>
                     {(contact.name || "?")
                       .trim()
@@ -232,7 +398,7 @@ export default function TrustedContacts() {
                   </div>
 
                   <div style={styles.contactInfo}>
-                    <div style={styles.nameRow}>
+                    <div className="trusted-name-row">
                       <h3 style={styles.contactName}>
                         {contact.name}
                       </h3>
@@ -250,10 +416,12 @@ export default function TrustedContacts() {
                   </div>
                 </div>
 
-                <div style={styles.actions}>
+                <div className="trusted-actions">
                   <button
                     type="button"
-                    onClick={() => openEditForm(contact)}
+                    onClick={() =>
+                      openEditForm(contact)
+                    }
                     style={styles.editButton}
                   >
                     ✎ Edit
@@ -261,8 +429,12 @@ export default function TrustedContacts() {
 
                   <button
                     type="button"
-                    onClick={() => deleteContact(contact)}
-                    disabled={deletingId === contact._id}
+                    onClick={() =>
+                      deleteContact(contact)
+                    }
+                    disabled={
+                      deletingId === contact._id
+                    }
                     style={styles.deleteButton}
                   >
                     {deletingId === contact._id
@@ -286,6 +458,7 @@ export default function TrustedContacts() {
 
         <div style={styles.infoBox}>
           <span style={{ fontSize: 22 }}>💜</span>
+
           <p style={styles.infoText}>
             Trusted contacts can receive your location,
             emergency alerts and safety check-in messages
@@ -298,7 +471,9 @@ export default function TrustedContacts() {
         <div
           style={styles.overlay}
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
+            if (
+              event.target === event.currentTarget
+            ) {
               closeForm();
             }
           }}
@@ -307,10 +482,10 @@ export default function TrustedContacts() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="contact-form-title"
-            style={styles.modal}
+            className="trusted-modal"
           >
             <div style={styles.modalHeader}>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <h2
                   id="contact-form-title"
                   style={styles.modalTitle}
@@ -319,6 +494,7 @@ export default function TrustedContacts() {
                     ? "Edit Contact"
                     : "Add Trusted Contact"}
                 </h2>
+
                 <p style={styles.modalSubtitle}>
                   Enter all contact details below.
                 </p>
@@ -337,7 +513,10 @@ export default function TrustedContacts() {
 
             <form onSubmit={saveContact}>
               <div style={styles.field}>
-                <label htmlFor="contact-name" style={styles.label}>
+                <label
+                  htmlFor="contact-name"
+                  style={styles.label}
+                >
                   Full Name
                 </label>
 
@@ -359,7 +538,10 @@ export default function TrustedContacts() {
               </div>
 
               <div style={styles.field}>
-                <label htmlFor="contact-phone" style={styles.label}>
+                <label
+                  htmlFor="contact-phone"
+                  style={styles.label}
+                >
                   Phone Number
                 </label>
 
@@ -396,8 +578,10 @@ export default function TrustedContacts() {
                   <strong style={{ fontSize: 14 }}>
                     Set as Primary Contact
                   </strong>
+
                   <p style={styles.checkboxHint}>
-                    Mark this person as your main trusted contact.
+                    Mark this person as your main
+                    trusted contact.
                   </p>
                 </div>
               </label>
@@ -408,7 +592,7 @@ export default function TrustedContacts() {
                 </p>
               )}
 
-              <div style={styles.modalActions}>
+              <div className="trusted-modal-actions">
                 <button
                   type="button"
                   onClick={closeForm}
@@ -439,13 +623,15 @@ export default function TrustedContacts() {
 }
 
 const styles = {
-  page: {
-    width: "100%",
-    maxWidth: 760,
-    margin: "0 auto",
-    padding: "12px 16px 40px",
-    boxSizing: "border-box",
-    fontFamily: "Inter, system-ui, sans-serif",
+  headerButton: {
+    border: "none",
+    background: "#7541dc",
+    color: "#ffffff",
+    padding: "9px 15px",
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
   },
 
   intro: {
@@ -494,27 +680,6 @@ const styles = {
     gap: 14,
   },
 
-  card: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 16,
-    background: "#ffffff",
-    border: "1px solid #eee7fc",
-    borderRadius: 18,
-    padding: "18px 20px",
-    boxShadow: "0 6px 22px rgba(99, 57, 166, 0.055)",
-  },
-
-  cardMain: {
-    display: "flex",
-    alignItems: "center",
-    gap: 14,
-    flex: "1 1 220px",
-    minWidth: 0,
-  },
-
   avatar: {
     width: 52,
     height: 52,
@@ -522,7 +687,8 @@ const styles = {
     borderRadius: 16,
     display: "grid",
     placeItems: "center",
-    background: "linear-gradient(135deg, #eee4ff, #e3d6ff)",
+    background:
+      "linear-gradient(135deg, #eee4ff, #e3d6ff)",
     color: "#7541dc",
     fontSize: 22,
     fontWeight: 800,
@@ -530,13 +696,7 @@ const styles = {
 
   contactInfo: {
     minWidth: 0,
-  },
-
-  nameRow: {
-    display: "flex",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
+    flex: 1,
   },
 
   contactName: {
@@ -554,6 +714,7 @@ const styles = {
     fontWeight: 700,
     padding: "5px 9px",
     borderRadius: 20,
+    whiteSpace: "nowrap",
   },
 
   phone: {
@@ -561,12 +722,6 @@ const styles = {
     fontSize: 13,
     color: "#777084",
     overflowWrap: "anywhere",
-  },
-
-  actions: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
   },
 
   editButton: {
@@ -594,15 +749,17 @@ const styles = {
   addButton: {
     width: "100%",
     marginTop: 24,
-    padding: "15px",
+    padding: 15,
     border: "none",
     borderRadius: 14,
-    background: "linear-gradient(135deg, #8647f5, #6335d6)",
+    background:
+      "linear-gradient(135deg, #8647f5, #6335d6)",
     color: "#ffffff",
     fontSize: 15,
     fontWeight: 750,
     cursor: "pointer",
-    boxShadow: "0 8px 20px rgba(117, 65, 215, 0.2)",
+    boxShadow:
+      "0 8px 20px rgba(117, 65, 215, 0.2)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -635,20 +792,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
+    padding: 12,
     boxSizing: "border-box",
-  },
-
-  modal: {
-    width: "100%",
-    maxWidth: 460,
-    maxHeight: "90vh",
-    overflowY: "auto",
-    background: "#ffffff",
-    borderRadius: 22,
-    padding: 28,
-    boxSizing: "border-box",
-    boxShadow: "0 24px 70px rgba(22, 12, 45, 0.25)",
   },
 
   modalHeader: {
@@ -675,6 +820,7 @@ const styles = {
   closeButton: {
     width: 34,
     height: 34,
+    flexShrink: 0,
     borderRadius: 10,
     border: "none",
     background: "#f4f0fa",
@@ -702,10 +848,11 @@ const styles = {
     padding: "13px 14px",
     border: "1px solid #ddd4eb",
     borderRadius: 11,
-    fontSize: 14,
+    fontSize: 16,
     outlineColor: "#8650e8",
     background: "#ffffff",
     color: "#27183d",
+    minWidth: 0,
   },
 
   checkboxRow: {
@@ -733,13 +880,6 @@ const styles = {
     color: "#81758f",
     fontSize: 12,
     lineHeight: 1.5,
-  },
-
-  modalActions: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 24,
   },
 
   cancelButton: {

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import "./LiveLocationViewer.css";
 
 const API_BASE = "http://localhost:5000";
 const REFRESH_MS = 10000;
@@ -22,9 +23,11 @@ export default function LiveLocationViewer() {
 
     let cancelled = false;
     let timer = null;
-    const controller = new AbortController();
+    let controller = null;
 
     const fetchLocation = async () => {
+      controller = new AbortController();
+
       try {
         const response = await fetch(
           `${API_BASE}/api/live/${encodeURIComponent(shareToken)}`,
@@ -46,7 +49,6 @@ export default function LiveLocationViewer() {
 
         if (cancelled) return;
 
-        // Check whether session has expired
         const expired =
           data.expiresAt &&
           new Date(data.expiresAt).getTime() <= Date.now();
@@ -54,17 +56,17 @@ export default function LiveLocationViewer() {
         if (expired) {
           setStatus("expired");
           setLocation(null);
+          setLastUpdated(null);
           return;
         }
 
-        // Check whether sharing is stopped
         if (data.active === false) {
           setStatus("stopped");
           setLocation(null);
+          setLastUpdated(null);
           return;
         }
 
-        // Match backend response structure
         const latitude = data.lastLocation?.lat;
         const longitude = data.lastLocation?.lng;
 
@@ -79,6 +81,7 @@ export default function LiveLocationViewer() {
           longitude > 180
         ) {
           setLocation(null);
+          setLastUpdated(null);
           setStatus("waiting");
           return;
         }
@@ -107,7 +110,7 @@ export default function LiveLocationViewer() {
 
     return () => {
       cancelled = true;
-      controller.abort();
+      controller?.abort();
       clearTimeout(timer);
     };
   }, [shareToken]);
@@ -116,122 +119,84 @@ export default function LiveLocationViewer() {
     ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
     : "";
 
-  const cardStyle = {
-    maxWidth: 650,
-    margin: "40px auto",
-    padding: 32,
-    background: "#ffffff",
-    borderRadius: 20,
-    boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
-    textAlign: "center",
-  };
-
   return (
-    <main style={cardStyle}>
-      <h2
-        style={{
-          color: "#5b21b6",
-          marginBottom: 24,
-        }}
-      >
-        Nirapod Poth – Live Location
-      </h2>
+    <div className="np-live-page">
+      <main className="np-live-card">
+        <h2 className="np-live-title">
+          Nirapod Poth – Live Location
+        </h2>
 
-      {status === "loading" && (
-        <p>Loading shared location...</p>
-      )}
-
-      {status === "waiting" && (
-        <p>Waiting for the first GPS location update...</p>
-      )}
-
-      {status === "error" && (
-        <p role="alert" style={{ color: "#b91c1c" }}>
-          {error}
-        </p>
-      )}
-
-      {status === "expired" && (
-        <p style={{ color: "#b91c1c", fontWeight: 700 }}>
-          This live location session has expired.
-        </p>
-      )}
-
-      {status === "stopped" && (
-        <p style={{ color: "#b91c1c", fontWeight: 700 }}>
-          Live location sharing has been stopped.
-        </p>
-      )}
-
-      {status === "active" && location && (
-        <>
-          <p
-            style={{
-              color: "#16a34a",
-              fontWeight: 700,
-              fontSize: 18,
-            }}
-          >
-            ● Live Location Available
+        {status === "loading" && (
+          <p className="np-live-message">
+            Loading shared location...
           </p>
+        )}
 
-          <div
-            style={{
-              background: "#f5f3ff",
-              padding: 20,
-              borderRadius: 14,
-              marginTop: 20,
-              textAlign: "left",
-            }}
-          >
-            <p>
-              <strong>Latitude:</strong>{" "}
-              {location.latitude}
+        {status === "waiting" && (
+          <p className="np-live-message">
+            Waiting for the first GPS location update...
+          </p>
+        )}
+
+        {status === "error" && (
+          <p role="alert" className="np-live-error">
+            {error}
+          </p>
+        )}
+
+        {status === "expired" && (
+          <p className="np-live-error np-live-bold">
+            This live location session has expired.
+          </p>
+        )}
+
+        {status === "stopped" && (
+          <p className="np-live-error np-live-bold">
+            Live location sharing has been stopped.
+          </p>
+        )}
+
+        {status === "active" && location && (
+          <>
+            <p className="np-live-active">
+              ● Live Location Available
             </p>
 
-            <p>
-              <strong>Longitude:</strong>{" "}
-              {location.longitude}
-            </p>
-
-            {lastUpdated && (
+            <div className="np-live-details">
               <p>
-                <strong>Last GPS Update:</strong>{" "}
-                {new Date(lastUpdated).toLocaleString()}
+                <strong>Latitude:</strong>{" "}
+                {location.latitude}
               </p>
-            )}
-          </div>
 
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block",
-              padding: 15,
-              background: "#693ed8",
-              color: "#ffffff",
-              borderRadius: 12,
-              textDecoration: "none",
-              fontWeight: 700,
-              marginTop: 20,
-            }}
-          >
-            View Location on Google Maps
-          </a>
-        </>
-      )}
+              <p>
+                <strong>Longitude:</strong>{" "}
+                {location.longitude}
+              </p>
 
-      <p
-        style={{
-          fontSize: 12,
-          color: "#777",
-          marginTop: 24,
-        }}
-      >
-        Location refreshes every 10 seconds while sharing
-        is active.
-      </p>
-    </main>
+              {lastUpdated && (
+                <p>
+                  <strong>Last GPS Update:</strong>{" "}
+                  {new Date(lastUpdated).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="np-live-map-button"
+            >
+              View Location on Google Maps
+            </a>
+          </>
+        )}
+
+        <p className="np-live-footer">
+          Location refreshes every 10 seconds while
+          sharing is active.
+        </p>
+      </main>
+    </div>
   );
 }

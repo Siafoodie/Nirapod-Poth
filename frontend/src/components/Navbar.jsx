@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useRef } from "react";
+
 import {
   Link,
   NavLink,
@@ -30,7 +30,10 @@ import { clearStoredUser } from "../utils/userStorage";
 import { API_BASE_URL } from "../api";
 import "./Navbar.css";
 
-// Get logged-in user
+// =====================================
+// CURRENT USER
+// =====================================
+
 function getCurrentUser() {
   try {
     const storedUser = localStorage.getItem("user");
@@ -40,7 +43,10 @@ function getCurrentUser() {
   }
 }
 
-// Profile image URL
+// =====================================
+// PROFILE IMAGE URL
+// =====================================
+
 function getProfileImageUrl(path) {
   if (!path) return "";
 
@@ -55,7 +61,10 @@ function getProfileImageUrl(path) {
   return `${server}/${String(path).replace(/^\/+/, "")}`;
 }
 
-// Normal user navigation
+// =====================================
+// USER MENU ITEMS
+// =====================================
+
 const userMenuItems = [
   {
     label: "Home",
@@ -104,7 +113,10 @@ const userMenuItems = [
   },
 ];
 
-// Admin navigation
+// =====================================
+// ADMIN MENU ITEMS
+// =====================================
+
 const adminMenuItems = [
   {
     label: "Admin Dashboard",
@@ -117,6 +129,55 @@ const adminMenuItems = [
     icon: UserRound,
   },
 ];
+
+// =====================================
+// MOBILE BOTTOM NAVIGATION
+// =====================================
+
+const mobileNavItems = [
+  {
+    label: "Home",
+    path: "/home",
+    icon: House,
+  },
+  {
+    label: "Places",
+    path: "/safe-places",
+    icon: MapPin,
+  },
+  {
+    label: "SOS",
+    path: "/emergency-sos",
+    icon: Siren,
+  },
+  {
+    label: "Reports",
+    path: "/nearby-reports",
+    icon: FileWarning,
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: UserRound,
+  },
+];
+
+const adminMobileNavItems = [
+  {
+    label: "Dashboard",
+    path: "/admin/reports",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: UserRound,
+  },
+];
+
+// =====================================
+// NAVBAR COMPONENT
+// =====================================
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -133,7 +194,10 @@ export default function Navbar() {
   const toggleRef = useRef(null);
   const panelRef = useRef(null);
 
-  // Detect admin
+  // =====================================
+  // ADMIN DETECTION
+  // =====================================
+
   const isAdmin =
     String(currentUser?.role || "")
       .trim()
@@ -143,9 +207,17 @@ export default function Navbar() {
     ? adminMenuItems
     : userMenuItems;
 
+  const bottomItems = isAdmin
+    ? adminMobileNavItems
+    : mobileNavItems;
+
   const homePath = isAdmin
     ? "/admin/reports"
     : "/home";
+
+  // =====================================
+  // PROFILE INFORMATION
+  // =====================================
 
   const displayName =
     currentUser?.name ||
@@ -160,7 +232,25 @@ export default function Navbar() {
 
   const avatarUrl = getProfileImageUrl(profileImage);
 
-  // Synchronize user
+  // =====================================
+  // HIDE BOTTOM NAV ON SPECIAL PAGES
+  // =====================================
+
+  const hiddenBottomRoutes = [
+    "/",
+    "/auth",
+    "/login",
+    "/register",
+  ];
+
+  const hideBottomNav =
+    hiddenBottomRoutes.includes(location.pathname) ||
+    location.pathname.startsWith("/live/");
+
+  // =====================================
+  // SYNCHRONIZE USER
+  // =====================================
+
   useEffect(() => {
     const syncUser = () => {
       setCurrentUser(getCurrentUser());
@@ -175,18 +265,27 @@ export default function Navbar() {
     };
   }, []);
 
-  // Reset avatar
+  // =====================================
+  // RESET AVATAR
+  // =====================================
+
   useEffect(() => {
     setAvatarFailed(false);
   }, [avatarUrl]);
 
-  // Close sidebar on navigation
+  // =====================================
+  // CLOSE MENU ON ROUTE CHANGE
+  // =====================================
+
   useEffect(() => {
     setMenuOpen(false);
     setCurrentUser(getCurrentUser());
   }, [location.pathname]);
 
-  // Escape key
+  // =====================================
+  // ESCAPE KEY SUPPORT
+  // =====================================
+
   useEffect(() => {
     if (!menuOpen) return;
 
@@ -207,14 +306,20 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
-  // Focus sidebar
+  // =====================================
+  // FOCUS SIDEBAR
+  // =====================================
+
   useEffect(() => {
     if (menuOpen) {
       panelRef.current?.querySelector("a")?.focus();
     }
   }, [menuOpen]);
 
-  // Sign out
+  // =====================================
+  // SIGN OUT
+  // =====================================
+
   const handleSignOut = () => {
     try {
       clearStoredUser();
@@ -237,13 +342,21 @@ export default function Navbar() {
     toggleRef.current?.focus();
   };
 
+  // =====================================
+  // RENDER
+  // =====================================
+
   return (
     <>
-      {/* Main header */}
+      {/* =====================================
+          MAIN HEADER
+      ===================================== */}
+
       <header className="np-nav-header">
         <Link
           to={homePath}
           className="np-nav-brand"
+          onClick={() => setMenuOpen(false)}
         >
           <img
             src="/nirapod-logo.png"
@@ -263,6 +376,8 @@ export default function Navbar() {
           </div>
         </Link>
 
+        {/* HAMBURGER BUTTON */}
+
         <button
           ref={toggleRef}
           type="button"
@@ -274,9 +389,9 @@ export default function Navbar() {
           }
           aria-expanded={menuOpen}
           aria-controls="np-sidebar"
-          onClick={() => {
-            setMenuOpen((previous) => !previous);
-          }}
+          onClick={() =>
+            setMenuOpen((previous) => !previous)
+          }
         >
           {menuOpen ? (
             <X size={21} />
@@ -290,7 +405,10 @@ export default function Navbar() {
         </button>
       </header>
 
-      {/* Backdrop */}
+      {/* =====================================
+          BACKDROP
+      ===================================== */}
+
       {menuOpen && (
         <button
           className="np-nav-backdrop"
@@ -300,7 +418,10 @@ export default function Navbar() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* =====================================
+          SIDEBAR
+      ===================================== */}
+
       <aside
         ref={panelRef}
         id="np-sidebar"
@@ -311,7 +432,8 @@ export default function Navbar() {
         aria-hidden={!menuOpen}
         inert={!menuOpen}
       >
-        {/* Sidebar header */}
+        {/* SIDEBAR HEADER */}
+
         <div className="np-nav-sidebar-top">
           <div className="np-nav-sidebar-title">
             <Sparkles size={16} />
@@ -333,7 +455,10 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Profile card */}
+        {/* =====================================
+            PROFILE CARD
+        ===================================== */}
+
         <Link
           to="/profile"
           className="np-profile-card"
@@ -375,15 +500,24 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Navigation label */}
+        {/* =====================================
+            NAVIGATION LABEL
+        ===================================== */}
+
         <div className="np-menu-section-label">
           {isAdmin
             ? "ADMIN NAVIGATION"
             : "QUICK NAVIGATION"}
         </div>
 
-        {/* Navigation items */}
-        <nav className="np-nav-list">
+        {/* =====================================
+            SIDEBAR LINKS
+        ===================================== */}
+
+        <nav
+          className="np-nav-list"
+          aria-label="Sidebar links"
+        >
           {visibleMenuItems.map(
             ({ label, path, icon: Icon }) => (
               <NavLink
@@ -416,7 +550,10 @@ export default function Navbar() {
           )}
         </nav>
 
-        {/* Sidebar bottom */}
+        {/* =====================================
+            SIDEBAR BOTTOM
+        ===================================== */}
+
         <div className="np-nav-sidebar-bottom">
           <button
             type="button"
@@ -450,6 +587,44 @@ export default function Navbar() {
           </div>
         </div>
       </aside>
+
+      {/* =====================================
+          MOBILE BOTTOM NAVIGATION
+      ===================================== */}
+
+      {!hideBottomNav && (
+        <nav
+          className="np-mobile-bottom-nav"
+          aria-label="Mobile navigation"
+        >
+          {bottomItems.map(
+            ({ label, path, icon: Icon }) => (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  `np-mobile-nav-item ${
+                    isActive ? "active" : ""
+                  } ${
+                    path === "/emergency-sos"
+                      ? "np-mobile-sos"
+                      : ""
+                  }`
+                }
+              >
+                <Icon
+                  size={22}
+                  strokeWidth={1.9}
+                  aria-hidden="true"
+                />
+
+                <span>{label}</span>
+              </NavLink>
+            )
+          )}
+        </nav>
+      )}
     </>
   );
 }

@@ -1,9 +1,22 @@
 
 import React, { useState } from "react";
+import {
+  Siren,
+  Phone,
+  MapPin,
+  Share2,
+  Square,
+  Copy,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
+} from "lucide-react";
+
 import Layout from "../components/Layout";
 import { enqueueOfflineItem } from "../services/offlineQueue";
 import { useLanguage } from "../context/LanguageContext";
 import useLiveShare from "../hooks/useLiveShare";
+import "./EmergencySOS.css";
 
 export default function EmergencySOS() {
   const { t } = useLanguage();
@@ -17,8 +30,15 @@ export default function EmergencySOS() {
   } = useLiveShare();
 
   const [sosStatus, setSosStatus] = useState("");
+  const [sosError, setSosError] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // US-14: Save SOS event locally before opening SMS app
+  const shareUrl = session?.shareUrl ||
+    (session?.shareToken
+      ? `${window.location.origin}/live/${session.shareToken}`
+      : "");
+
+  // US-14: Preserve offline SOS queue
   const sendEmergencySMS = () => {
     const message =
       "EMERGENCY! I need help. Sent via Nirapod Poth.";
@@ -34,18 +54,19 @@ export default function EmergencySOS() {
 
       console.log("SOS event queued:", item.clientId);
 
+      setSosError(false);
       setSosStatus(
-        "SOS event saved locally. It will sync when the app is online. Please complete sending the SMS in your messaging app."
+        "SOS event saved locally for synchronization. Complete sending the SMS in your messaging app."
       );
     } catch (error) {
-      console.error("Failed to save SOS event:", error);
+      console.error("Failed to queue SOS:", error);
 
+      setSosError(true);
       setSosStatus(
-        "Could not save the SOS event locally. Please contact emergency services directly."
+        "SOS event could not be saved locally. You can still try sending the SMS or call emergency services."
       );
     }
 
-    // Open SMS application on supported devices
     window.location.href =
       `sms:?body=${encodeURIComponent(message)}`;
   };
@@ -58,297 +79,249 @@ export default function EmergencySOS() {
     window.location.href = "tel:109";
   };
 
-  const primaryButtonStyle = {
-    width: "100%",
-    background: "#6d28d9",
-    color: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    padding: "16px 20px",
-    fontWeight: 700,
-    fontSize: "14px",
-    cursor: "pointer",
-    marginBottom: "8px",
+  // US-15: Preserve live location hook
+  const startLiveSharing = async () => {
+    setCopied(false);
+    await start([]);
   };
 
-  const helplineButtonStyle = {
-    width: "100%",
-    background: "#f5f3ff",
-    color: "#5b21b6",
-    border: "none",
-    borderRadius: "12px",
-    padding: "14px 16px",
-    fontWeight: 600,
-    fontSize: "14px",
-    cursor: "pointer",
-    marginBottom: "10px",
+  const stopLiveSharing = async () => {
+    await stop();
+    setCopied(false);
+  };
+
+  const copyShareLink = async () => {
+    if (!shareUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const shareLiveLink = async () => {
+    if (!shareUrl) return;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Nirapod Poth Live Location",
+          text: "Follow my live location:",
+          url: shareUrl,
+        });
+      } else {
+        await copyShareLink();
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error("Unable to share link:", error);
+      }
+    }
   };
 
   return (
     <Layout title={t("emergency")} menu>
-      <div
-        style={{
-          minHeight: "70vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "20px",
-            padding: "32px 28px",
-            width: "100%",
-            maxWidth: "360px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
-            textAlign: "center",
-          }}
-        >
-          {/* Logo */}
-          <div
-            style={{
-              width: "56px",
-              height: "56px",
-              margin: "0 auto 16px",
-              borderRadius: "14px",
-              background: "#1a1a2e",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#a78bfa",
-              fontWeight: 800,
-              fontSize: "18px",
-            }}
-          >
-            NP
+      <main className="np-sos-page">
+        <div className="np-sos-container">
+
+          <div className="np-sos-heading">
+            <div className="np-sos-heading-icon">
+              <Siren size={24} />
+            </div>
+
+            <div>
+              <h1>
+                {t("emergencySos") || "Emergency SOS"}
+              </h1>
+              <p>
+                {t("emergencySubtitle") ||
+                  "Quick response tools for urgent safety situations"}
+              </p>
+            </div>
           </div>
 
-          {/* Title */}
-          <h2
-            style={{
-              margin: "0 0 6px",
-              fontSize: "22px",
-              fontWeight: 700,
-              color: "#1e1b4b",
-            }}
-          >
-            {t("emergencySos") || "Emergency SOS"}
-          </h2>
-
-          {/* Subtitle */}
-          <p
-            style={{
-              margin: "0 0 24px",
-              fontSize: "13px",
-              color: "#6b7280",
-              lineHeight: 1.4,
-            }}
-          >
-            {t("emergencySubtitle") ||
-              "Quick response tools for urgent safety situations"}
-          </p>
-
-          {/* US-14: Emergency SMS */}
-          <button
-            type="button"
-            onClick={sendEmergencySMS}
-            style={primaryButtonStyle}
-          >
-            {t("sendEmergencySms") ||
-              "SEND EMERGENCY SMS"}
-
-            <div
-              style={{
-                fontSize: "11px",
-                fontWeight: 400,
-                opacity: 0.9,
-                marginTop: "4px",
-              }}
-            >
-              {t("worksOffline") ||
-                "Works offline without internet/data"}
+          <section className="np-sos-card">
+            <div className="np-sos-alert-icon">
+              <Siren size={32} />
             </div>
-          </button>
 
-          {/* SOS Queue Status */}
-          {sosStatus && (
-            <div
-              role="status"
-              style={{
-                marginTop: "12px",
-                marginBottom: "14px",
-                padding: "12px",
-                background: "#f5f3ff",
-                border: "1px solid #ddd6fe",
-                borderRadius: "10px",
-                color: "#5b21b6",
-                fontSize: "12px",
-                lineHeight: 1.5,
-                textAlign: "left",
-              }}
-            >
-              {sosStatus}
-            </div>
-          )}
-
-          {/* National Helplines */}
-          <div
-            style={{
-              margin: "22px 0 16px",
-              fontSize: "11px",
-              letterSpacing: "1px",
-              color: "#9ca3af",
-              fontWeight: 600,
-            }}
-          >
-            {t("nationalHelplines") ||
-              "NATIONAL HELPLINES"}
-          </div>
-
-          {/* 999 */}
-          <button
-            type="button"
-            onClick={call999}
-            style={helplineButtonStyle}
-          >
-            {t("callNationalEmergency") ||
-              "Call National Emergency (999)"}
-          </button>
-
-          {/* 109 */}
-          <button
-            type="button"
-            onClick={call109}
-            style={helplineButtonStyle}
-          >
-            {t("callWomenHelpline") ||
-              "Women & Children Helpline (109)"}
-          </button>
-
-          {/* US-15: Live Location Sharing */}
-          <div
-            style={{
-              marginTop: 20,
-              textAlign: "left",
-            }}
-          >
-            <h3
-              style={{
-                margin: "0 0 8px",
-                fontSize: 15,
-                color: "#4a2c85",
-              }}
-            >
-              Live location
-            </h3>
-
-            <p
-              style={{
-                margin: "0 0 12px",
-                fontSize: 12,
-                color: "#7e6c9c",
-              }}
-            >
-              Share your live GPS with trusted contacts
-              for up to 60 minutes.
+            <h2>Need emergency assistance?</h2>
+            <p className="np-sos-description">
+              Send an emergency SMS or contact
+              national emergency services immediately.
             </p>
 
-            {!sharing ? (
-              <button
-                type="button"
-                onClick={() => start([])}
-                style={{
-                  width: "100%",
-                  padding: "14px 16px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: "#693ed8",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  boxShadow:
-                    "0 6px 18px rgba(91, 43, 217, 0.22)",
-                }}
-              >
-                Start live location
-              </button>
-            ) : (
+            <button
+              type="button"
+              className="np-sos-primary"
+              onClick={sendEmergencySMS}
+            >
+              <Siren size={23} />
+              <span>
+                {t("sendEmergencySms") ||
+                  "SEND EMERGENCY SMS"}
+              </span>
+            </button>
+
+            <p className="np-sos-note">
+              Opens your phone's SMS application.
+              You must confirm sending the message.
+            </p>
+
+            {sosStatus && (
               <div
-                style={{
-                  padding: 14,
-                  borderRadius: 14,
-                  background: "#f5f3ff",
-                  border: "1px solid #e9e1f3",
-                }}
+                className={`np-sos-status ${
+                  sosError ? "error" : "success"
+                }`}
+                role="status"
               >
-                <p
-                  style={{
-                    margin: "0 0 8px",
-                    fontWeight: 700,
-                    color: "#16a34a",
-                  }}
-                >
-                  Live sharing ON
-                </p>
+                {sosError ? (
+                  <AlertCircle size={20} />
+                ) : (
+                  <CheckCircle2 size={20} />
+                )}
 
-                <p
-                  style={{
-                    margin: "0 0 6px",
-                    fontSize: 12,
-                  }}
-                >
-                  Share this link with trusted contacts:
-                </p>
-
-                <code
-                  style={{
-                    display: "block",
-                    fontSize: 11,
-                    wordBreak: "break-all",
-                    marginBottom: 12,
-                  }}
-                >
-                  {session?.shareToken
-                    ? `${window.location.origin}/live/${session.shareToken}`
-                    : ""}
-                </code>
-
-                <button
-                  type="button"
-                  onClick={stop}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "1px solid #f9a8d4",
-                    background: "#fdf2f8",
-                    color: "#9d174d",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Stop sharing
-                </button>
+                <span>{sosStatus}</span>
               </div>
             )}
+          </section>
 
-            {liveError && (
-              <p
-                style={{
-                  marginTop: 10,
-                  fontSize: 12,
-                  color: "#b91c1c",
-                }}
+          <section className="np-sos-section">
+            <div className="np-sos-section-title">
+              <Phone size={19} />
+              <h2>National Helplines</h2>
+            </div>
+
+            <div className="np-sos-helplines">
+              <button
+                type="button"
+                onClick={call999}
+                className="np-sos-call-button"
               >
-                {liveError}
+                <div className="np-sos-call-icon">
+                  <Phone size={21} />
+                </div>
+
+                <span>
+                  <strong>999</strong>
+                  <small>National Emergency</small>
+                </span>
+
+                <span className="np-sos-call-label">
+                  Call
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={call109}
+                className="np-sos-call-button"
+              >
+                <div className="np-sos-call-icon">
+                  <Phone size={21} />
+                </div>
+
+                <span>
+                  <strong>109</strong>
+                  <small>Women & Children Helpline</small>
+                </span>
+
+                <span className="np-sos-call-label">
+                  Call
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section className="np-sos-section">
+            <div className="np-sos-section-title">
+              <MapPin size={19} />
+              <h2>Live Location Sharing</h2>
+            </div>
+
+            <div className="np-sos-live-card">
+              <p className="np-sos-live-description">
+                Share your live GPS location with
+                trusted people for up to 60 minutes.
               </p>
-            )}
+
+              {!sharing ? (
+                <button
+                  type="button"
+                  className="np-sos-live-start"
+                  onClick={startLiveSharing}
+                >
+                  <MapPin size={19} />
+                  Start Live Location
+                </button>
+              ) : (
+                <div className="np-sos-sharing-active">
+                  <div className="np-sos-live-indicator">
+                    <span className="np-sos-live-dot" />
+                    Live Sharing Active
+                  </div>
+
+                  <p>
+                    Share this link with someone
+                    you trust:
+                  </p>
+
+                  <div className="np-sos-share-link">
+                    {shareUrl}
+                  </div>
+
+                  <div className="np-sos-share-actions">
+                    <button
+                      type="button"
+                      onClick={copyShareLink}
+                    >
+                      {copied ? (
+                        <CheckCircle2 size={17} />
+                      ) : (
+                        <Copy size={17} />
+                      )}
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={shareLiveLink}
+                    >
+                      <Share2 size={17} />
+                      Share
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="np-sos-stop"
+                    onClick={stopLiveSharing}
+                  >
+                    <Square size={17} />
+                    Stop Sharing
+                  </button>
+                </div>
+              )}
+
+              {liveError && (
+                <p className="np-sos-live-error" role="alert">
+                  <AlertCircle size={17} />
+                  {liveError}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <div className="np-sos-footer">
+            <ShieldCheck size={17} />
+            <span>
+              Your safety matters. Stay connected.
+            </span>
           </div>
         </div>
-      </div>
+      </main>
     </Layout>
   );
 }

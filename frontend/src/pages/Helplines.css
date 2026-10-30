@@ -1,0 +1,201 @@
+
+/* =====================================
+   HELPLINES - ORIGINAL DESKTOP DESIGN
+===================================== */
+
+.helplines-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  min-height: 85vh;
+  box-sizing: border-box;
+}
+
+.helplines-container *,
+.helplines-container *::before,
+.helplines-container *::after {
+  box-sizing: border-box;
+}
+
+.helplines-back {
+  border: none;
+  background: transparent;
+  color: #6541c1;
+  cursor: pointer;
+  font-size: 15px;
+  margin-bottom: 20px;
+}
+
+.helplines-heading {
+  font-size: 32px;
+  color: #171638;
+  margin-bottom: 10px;
+}
+
+.helplines-subtitle {
+  color: #66617a;
+  margin-bottom: 30px;
+}
+
+.helplines-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 20px;
+}
+
+.helplines-card {
+  background: #ffffff;
+  border: 1px solid #e6def5;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  min-width: 0;
+}
+
+.helplines-card-title {
+  font-size: 20px;
+  color: #171638;
+}
+
+.helplines-description {
+  color: #66617a;
+  min-height: 48px;
+}
+
+.helplines-number {
+  font-size: 32px;
+  font-weight: bold;
+  color: #6541c1;
+  margin: 16px 0;
+}
+
+.helplines-call {
+  display: inline-block;
+  background: #6541c1;
+  color: #ffffff;
+  padding: 12px 22px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.helplines-note {
+  margin-top: 28px;
+  color: #66617a;
+  font-size: 14px;
+}
+
+/* =====================================
+   MOBILE RESPONSIVE - 650px AND BELOW
+===================================== */
+
+@media (max-width: 650px) {
+  .helplines-container {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    padding: 24px 16px 115px;
+    overflow-x: clip;
+  }
+
+  .helplines-back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .helplines-heading {
+    font-size: 26px;
+    line-height: 1.25;
+    margin-top: 0;
+    margin-bottom: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .helplines-subtitle {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .helplines-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .helplines-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+  .helplines-card-title {
+    font-size: 18px;
+    line-height: 1.4;
+    margin-top: 0;
+    margin-bottom: 12px;
+  }
+
+  .helplines-description {
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 0;
+    margin-bottom: 14px;
+  }
+
+  .helplines-number {
+    font-size: 30px;
+    margin: 14px 0;
+  }
+
+  .helplines-call {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 15px;
+    text-align: center;
+  }
+
+  .helplines-note {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-top: 24px;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* =====================================
+   SMALL MOBILE - 320px TO 375px
+===================================== */
+
+@media (max-width: 375px) {
+  .helplines-container {
+    padding: 20px 12px 110px;
+  }
+
+  .helplines-heading {
+    font-size: 23px;
+  }
+
+  .helplines-card {
+    padding: 16px;
+  }
+
+  .helplines-card-title {
+    font-size: 17px;
+  }
+
+  .helplines-number {
+    font-size: 28px;
+  }
+
+  .helplines-call {
+    min-height: 46px;
+  }
+}

@@ -1498,3 +1498,603 @@ textarea:focus-visible {
   cursor: pointer;
   text-align: left;
 } 
+
+/* ==========================================
+   NIRAPOD POTH - MOBILE HOME RESPONSIVE
+========================================== */
+
+@media (max-width: 600px) {
+
+  .home-dash {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 18px 16px 105px;
+    margin: 0;
+    overflow-x: clip;
+  }
+
+  /* Hide duplicate Home header on mobile */
+  .home-dash-top {
+    display: none;
+  }
+
+  /* Greeting */
+  .home-greet h1 {
+    font-size: clamp(23px, 6vw, 28px);
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+
+  .home-sub {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  /* Location search */
+  .home-loc-form {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    gap: 6px;
+    border-radius: 15px;
+  }
+
+  .home-loc-form input {
+    min-width: 0;
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .home-loc-btn {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  /* Area Safety */
+  .home-safety-card {
+    padding: 16px;
+    border-radius: 18px;
+    margin: 14px 0 22px;
+  }
+
+  .home-safety-head {
+    gap: 10px;
+  }
+
+  .home-safety-head > div:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .home-safety-card h2 {
+    font-size: 19px;
+    overflow-wrap: anywhere;
+  }
+
+  .home-safety-badge {
+    min-width: 70px;
+    flex-shrink: 0;
+    padding: 9px 6px;
+  }
+
+  .home-safety-hint {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .home-safety-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .home-primary {
+    min-height: 44px;
+    justify-content: center;
+    padding: 11px 14px;
+  }
+
+  .home-ghost {
+    min-height: 44px;
+    padding: 8px;
+  }
+
+  /* Quick Actions */
+  .home-section-title {
+    font-size: 17px;
+    margin: 18px 0 12px;
+  }
+
+  .home-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .home-action {
+    min-width: 0;
+    min-height: 110px;
+    padding: 15px 12px;
+    border-radius: 16px;
+  }
+
+  .home-action span {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .home-action small {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* Safety Tools */
+  .home-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .home-tools button {
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px 10px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Extra-small mobile devices */
+@media (max-width: 360px) {
+
+  .home-dash {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .home-safety-card {
+    padding: 13px;
+  }
+
+  .home-actions-grid,
+  .home-tools {
+    gap: 8px;
+  }
+
+  .home-action {
+    padding: 12px 9px;
+  }
+
+  .home-primary {
+    font-size: 12px;
+  }
+}
+
+/* ==========================================
+   NIRAPOD POTH - SAFE PLACES MOBILE FIX
+   Keep existing desktop design unchanged
+========================================== */
+
+@media (max-width: 600px) {
+
+  .safe-directory {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 0 16px 110px;
+    box-sizing: border-box;
+  }
+
+  .safe-directory,
+  .safe-directory * {
+    box-sizing: border-box;
+  }
+
+  .safe-directory-header {
+    width: auto;
+    margin: 0 -16px;
+    padding: 16px;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+
+  .safe-directory-header h1 {
+    font-size: 20px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .safe-back {
+    flex: 0 0 42px;
+  }
+
+  .safe-header-icon {
+    flex-shrink: 0;
+  }
+
+  .safe-intro {
+    padding: 20px 0 12px;
+  }
+
+  .safe-intro h2 {
+    font-size: 19px;
+    line-height: 1.3;
+  }
+
+  .safe-intro p {
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  /* Search bar */
+
+  .safe-search {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 52px;
+    padding: 7px 9px;
+    gap: 7px;
+  }
+
+  .safe-search input {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+    font-size: 16px;
+  }
+
+  .safe-search button {
+    flex-shrink: 0;
+  }
+
+  .safe-search button[type="submit"] {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .safe-locate {
+    flex: 0 0 36px;
+  }
+
+  .safe-location-label,
+  .safe-inline-error {
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+
+  /* Horizontal category filters */
+
+  .safe-filters {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    padding: 14px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .safe-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-filters button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Map */
+
+  .safe-map-section {
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .safe-map-title,
+  .safe-list-title {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .safe-map-title h2,
+  .safe-list-title h2 {
+    font-size: 17px;
+    overflow-wrap: anywhere;
+  }
+
+  .safe-map {
+    width: 100%;
+    height: 230px;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .safe-map .leaflet-container {
+    width: 100%;
+    height: 100%;
+  }
+
+  .safe-map-popup {
+    min-width: 0;
+    max-width: 220px;
+  }
+
+  /* Safe place cards */
+
+  .safe-directory-list,
+  .safe-place-cards {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .safe-place-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .safe-place-card {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 10px;
+  }
+
+  .safe-place-type {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .safe-place-info {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .safe-place-info h3,
+  .safe-place-info p,
+  .safe-place-info small {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .safe-directions {
+    flex: 0 0 auto;
+    padding: 8px;
+    white-space: nowrap;
+  }
+
+  .safe-empty {
+    width: 100%;
+    padding: 22px 12px;
+  }
+
+  .safe-directory-bottom-space {
+    height: 20px;
+  }
+}
+
+/* Extra-small phones */
+
+@media (max-width: 360px) {
+
+  .safe-directory {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .safe-directory-header {
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 12px;
+  }
+
+  .safe-directory-header h1 {
+    font-size: 18px;
+  }
+
+  .safe-map {
+    height: 210px;
+  }
+
+  .safe-place-card {
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .safe-place-info h3 {
+    font-size: 13px;
+  }
+
+  .safe-directions {
+    padding: 7px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .safe-directory {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-directory-bottom-space {
+    height: 30px;
+  }
+
+  .safe-search input {
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+
+  .safe-place-card {
+    min-width: 0;
+  }
+}
+
+/* ==========================================
+   NIRAPOD POTH - AUTH MOBILE RESPONSIVE
+   Login & Register
+   ========================================== */
+
+@media (max-width: 600px) {
+
+  .phone.auth {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    padding: 28px 16px 40px;
+    margin: 0 auto;
+    background: #f7f3ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .authbox {
+    width: 100%;
+    max-width: 500px;
+    min-width: 0;
+    margin: 0 auto;
+    padding: 28px 22px;
+    border-radius: 22px;
+    background: #ffffff;
+    text-align: center;
+  }
+
+  .auth-logo {
+    width: 120px;
+    height: 100px;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 16px;
+  }
+
+  .authbox h1 {
+    font-size: 26px;
+    line-height: 1.25;
+    margin: 16px 0 10px;
+  }
+
+  .authbox > p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .authbox form {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .auth input,
+  .auth textarea {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 14px 15px;
+    margin: 10px 0;
+    font-size: 16px;
+    border-radius: 12px;
+    box-sizing: border-box;
+  }
+
+  .authbox form button {
+    width: 100%;
+    max-width: 100%;
+    min-height: 48px;
+    margin-top: 14px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+
+  .authswitch {
+    margin: 20px 0 0;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .auth .error {
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Extra small mobile screens */
+@media (max-width: 360px) {
+
+  .phone.auth {
+    padding: 18px 12px 30px;
+  }
+
+  .authbox {
+    padding: 24px 16px;
+    border-radius: 18px;
+  }
+
+  .authbox h1 {
+    font-size: 23px;
+  }
+
+  .auth-logo {
+    width: 105px;
+    height: 88px;
+  }
+}
+
+/* Short mobile screens */
+@media (max-width: 600px) and (max-height: 650px) {
+
+  .phone.auth {
+    align-items: flex-start;
+  }
+}
+
+/* Login & Register - Purple Gradient Button */
+
+.authbox form button {
+  width: 100%;
+  min-height: 54px;
+  padding: 14px 20px;
+
+  background: linear-gradient(135deg, #5b2bd9, #8b5cf6) !important;
+  color: #ffffff !important;
+
+  border: none !important;
+  border-radius: 14px;
+
+  font-size: 17px;
+  font-weight: 700;
+
+  box-shadow: 0 6px 18px rgba(91, 43, 217, 0.25);
+
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.authbox form button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4c1d95, #7c3aed) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 9px 22px rgba(91, 43, 217, 0.32);
+}
+
+.authbox form button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.authbox form button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
