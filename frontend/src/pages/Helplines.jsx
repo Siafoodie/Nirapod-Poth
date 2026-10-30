@@ -1,5 +1,6 @@
 
 import { useNavigate } from "react-router-dom";
+import "./Helplines.css";
 
 const helplines = [
   {
@@ -28,35 +29,45 @@ export default function Helplines() {
   const navigate = useNavigate();
 
   return (
-    <main style={styles.container}>
+    <main className="helplines-container">
       <button
         type="button"
         onClick={() => navigate("/home")}
-        style={styles.backButton}
+        className="helplines-back"
       >
         ← Back to Home
       </button>
 
-      <h1 style={styles.heading}>Emergency Helplines</h1>
+      <h1 className="helplines-heading">
+        Emergency Helplines
+      </h1>
 
-      <p style={styles.subtitle}>
+      <p className="helplines-subtitle">
         Important emergency and support numbers in Bangladesh.
       </p>
 
-      <div style={styles.grid}>
+      <div className="helplines-grid">
         {helplines.map((item) => (
-          <article key={item.number} style={styles.card}>
-            <h2 style={styles.cardTitle}>{item.name}</h2>
+          <article
+            key={item.number}
+            className="helplines-card"
+          >
+            <h2 className="helplines-card-title">
+              {item.name}
+            </h2>
 
-            <p style={styles.description}>
+            <p className="helplines-description">
               {item.description}
             </p>
 
-            <p style={styles.number}>{item.number}</p>
+            <p className="helplines-number">
+              {item.number}
+            </p>
 
             <a
               href={`tel:${item.number}`}
-              style={styles.callButton}
+              className="helplines-call"
+              aria-label={`Call ${item.name} at ${item.number}`}
             >
               Call {item.number}
             </a>
@@ -64,7 +75,7 @@ export default function Helplines() {
         ))}
       </div>
 
-      <p style={styles.note}>
+      <p className="helplines-note">
         For immediate danger, contact the National Emergency
         Service at 999. Phone calls require a supported device
         and calling service.
@@ -72,70 +83,3 @@ export default function Helplines() {
     </main>
   );
 }
-
-const styles = {
-  container: {
-    maxWidth: "1000px",
-    margin: "0 auto",
-    padding: "32px 20px",
-    minHeight: "85vh",
-  },
-  backButton: {
-    border: "none",
-    background: "transparent",
-    color: "#6541c1",
-    cursor: "pointer",
-    fontSize: "15px",
-    marginBottom: "20px",
-  },
-  heading: {
-    fontSize: "32px",
-    color: "#171638",
-    marginBottom: "10px",
-  },
-  subtitle: {
-    color: "#66617a",
-    marginBottom: "30px",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
-    gap: "20px",
-  },
-  card: {
-    background: "#ffffff",
-    border: "1px solid #e6def5",
-    borderRadius: "14px",
-    padding: "24px",
-    boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
-  },
-  cardTitle: {
-    fontSize: "20px",
-    color: "#171638",
-  },
-  description: {
-    color: "#66617a",
-    minHeight: "48px",
-  },
-  number: {
-    fontSize: "32px",
-    fontWeight: "bold",
-    color: "#6541c1",
-    margin: "16px 0",
-  },
-  callButton: {
-    display: "inline-block",
-    background: "#6541c1",
-    color: "#ffffff",
-    padding: "12px 22px",
-    borderRadius: "8px",
-    textDecoration: "none",
-    fontWeight: "bold",
-  },
-  note: {
-    marginTop: "28px",
-    color: "#66617a",
-    fontSize: "14px",
-  },
-};
