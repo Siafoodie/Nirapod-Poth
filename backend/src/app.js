@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -37,6 +36,7 @@ app.use(cors());
 // =====================================
 // Body Parsing Middleware
 // Must be BEFORE API routes
+// (multipart/form-data is handled by multer on specific routes)
 // =====================================
 
 app.use(express.json());
@@ -46,19 +46,16 @@ app.use(express.urlencoded({ extended: true }));
 // Privacy-Safe HTTP Logging
 // =====================================
 
-// Avoid logging query parameters
-// and request bodies.
-
 morgan.token("safe-path", (req) => {
   return req.path;
 });
 
-app.use(
-  morgan(":method :safe-path :status :response-time ms")
-);
+app.use(morgan(":method :safe-path :status :response-time ms"));
 
 // =====================================
-// Static Profile Uploads
+// Static uploads (profile + police-id cards)
+// Files live in: backend/uploads/...
+// URL: http://localhost:5000/uploads/police-id/<filename>
 // =====================================
 
 app.use(
@@ -83,22 +80,13 @@ app.get("/api/health", (req, res) => {
 // =====================================
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/reports", reportRoutes);
-
 app.use("/api/live", liveSessionRoutes);
-
 app.use("/api/moderation", moderationRoutes);
-
 app.use("/api/safe-places", safePlaceRoutes);
-
 app.use("/api/routes", routeRoutes);
-
 app.use("/api/profile", profileRoutes);
-
 app.use("/api/contacts", contactRoutes);
-
-// US-14: Offline SOS Synchronization
 app.use("/api/sos", sosRoutes);
 
 // =====================================
@@ -108,4 +96,4 @@ app.use("/api/sos", sosRoutes);
 
 app.use(errorHandler);
 
-module.exports = app;
+module.exports = app;  

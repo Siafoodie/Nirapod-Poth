@@ -4,13 +4,23 @@ export const API_BASE_URL =
 
 export async function api(endpoint, options = {}) {
   const token = localStorage.getItem("token");
+
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
+  // Only set JSON content-type when body is NOT FormData.
+  // Browser must set multipart boundary for file uploads.
+  if (options.body && !(options.body instanceof FormData)) {
+    if (!headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+  }
+
   const config = {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
   };
 
   let response;
@@ -31,7 +41,9 @@ export async function api(endpoint, options = {}) {
     try {
       data = JSON.parse(responseText);
     } catch {
-      throw new Error(`The API returned an invalid response (${response.status}).`);
+      throw new Error(
+        `The API returned an invalid response (${response.status}).`,
+      );
     }
   }
 
@@ -42,4 +54,4 @@ export async function api(endpoint, options = {}) {
   }
 
   return data;
-}
+}  

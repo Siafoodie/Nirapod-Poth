@@ -34,6 +34,10 @@ const toReportResponse = (report, voterId) => {
     score: upvotes - downvotes,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
+    // public badges only — never expose reporterUserId / email
+    reporterRole: data.reporterRole || "anonymous",
+    policeVerified: !!data.policeVerified,
+    verifiedAt: data.verifiedAt || null,
   };
 
   if (
@@ -98,7 +102,6 @@ const calculateDistanceKm = (
 };
 
 // GET /api/reports/nearby
-// Only approved reports are publicly visible.
 router.get("/nearby", async (req, res) => {
   try {
     const latitude = Number(req.query.latitude);
@@ -187,8 +190,9 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/reports
-// Anonymous incident report submission.
-router.post("/", async (req, res) => {
+// Must be logged in. Optional anonymous flag hides identity publicly.
+// Body: { ..., anonymous: true | false }
+router.post("/", protect, async (req, res) => {
   try {
     if (
       !req.body ||
@@ -208,9 +212,10 @@ router.post("/", async (req, res) => {
       latitude,
       longitude,
       clientId,
+      anonymous,
     } = req.body;
 
-    // US-14: offline queue dedupe — same clientId must not create twice
+    // US-14: offline queue dedupe
     if (typeof clientId === "string" && clientId.trim()) {
       const existing = await Report.findOne({ clientId: clientId.trim() });
       if (existing) {
@@ -267,13 +272,29 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // Only approved fields are persisted.
-    // Reporter identity and travel history are not saved.
+    // --- Identity / anonymity ---
+    // Must be registered (protect). anonymous=true → public badge "anonymous"
+    // anonymous=false → user or police badge from account role
+    const postAnonymously = anonymous === true || anonymous === "true";
+
+    let reporterRole;
+    let reporterUserId = req.user._id; // kept for audit; never sent in toReportResponse
+
+    if (postAnonymously) {
+      reporterRole = "anonymous";
+    } else if (req.user.role === "police") {
+      reporterRole = "police";
+    } else {
+      reporterRole = "user";
+    }
+
     const reportData = {
       incidentType: incidentType.trim(),
       location: location.trim(),
       description: (description || "").trim(),
       moderationStatus: "pending",
+      reporterRole,
+      reporterUserId,
     };
 
     if (typeof clientId === "string" && clientId.trim()) {
@@ -291,17 +312,19 @@ router.post("/", async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Report submitted successfully!",
+      message: postAnonymously
+        ? "Anonymous report submitted successfully!"
+        : "Report submitted successfully!",
       data: toReportResponse(report),
       duplicate: false,
     });
   } catch (error) {
     console.error("Create report error:", error);
 
-    // Unique index race: two parallel offline retries with same clientId
     if (
       error.code === 11000 &&
-      (error.keyPattern?.clientId || String(error.message || "").includes("clientId"))
+      (error.keyPattern?.clientId ||
+        String(error.message || "").includes("clientId"))
     ) {
       try {
         const existing = await Report.findOne({
@@ -323,6 +346,54 @@ router.post("/", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to submit report",
+    });
+  }
+});
+
+// POST /api/reports/:id/verify — police only
+router.post("/:id/verify", protect, async (req, res) => {
+  try {
+    if (req.user.role !== "police") {
+      return res.status(403).json({
+        success: false,
+        message: "Only police officers can verify reports",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid report ID",
+      });
+    }
+
+    const report = await Report.findByIdAndUpdate(
+      req.params.id,
+      {
+        policeVerified: true,
+        verifiedBy: req.user._id,
+        verifiedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Report marked as police-verified",
+      data: toReportResponse(report),
+    });
+  } catch (error) {
+    console.error("Verify report error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to verify report",
     });
   }
 });
@@ -355,8 +426,6 @@ router.post(
       }
 
       const { vote, latitude, longitude } = req.body;
-
-      // Use authenticated user identity.
       const normalizedVoterId = String(req.user._id);
 
       if (vote !== "upvote" && vote !== "downvote") {
@@ -439,8 +508,6 @@ router.post(
         });
       }
 
-      // Update vote atomically.
-      // Only approved reports can be modified.
       const report = await Report.findOneAndUpdate(
         {
           _id: reportId,
@@ -542,4 +609,4 @@ router.get("/:id/score", async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;  

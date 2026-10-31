@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const voteSchema = new mongoose.Schema(
@@ -70,7 +69,6 @@ const geoSchema = new mongoose.Schema(
 
 const reportSchema = new mongoose.Schema(
   {
-
     incidentType: {
       type: String,
       required: true,
@@ -89,12 +87,14 @@ const reportSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-clientId: {
+
+    clientId: {
       type: String,
       unique: true,
       sparse: true,
       index: true,
     },
+
     geo: {
       type: geoSchema,
       default: undefined,
@@ -134,6 +134,39 @@ clientId: {
       default: 0,
       min: 0,
     },
+
+    // ----- Police / credibility (US-style extension) -----
+    // Who filed: anonymous form stays "anonymous"; logged-in sets user|police
+    reporterRole: {
+      type: String,
+      enum: ["user", "police", "anonymous"],
+      default: "anonymous",
+      index: true,
+    },
+
+    reporterUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // Police marks a civilian (or any) report as credible
+    policeVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -155,4 +188,4 @@ reportSchema.index(
 const Report =
   mongoose.models.Report || mongoose.model("Report", reportSchema);
 
-module.exports = Report;
+module.exports = Report; 

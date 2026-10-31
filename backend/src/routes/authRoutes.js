@@ -5,6 +5,13 @@ const {
   register,
   login,
 } = require("../controllers/authController");
+const uploadPoliceId = require("../middleware/uploadPoliceId");
+
+router.post(
+  "/register",
+  uploadPoliceId.single("policeIdCard"),
+  register
+); 
 
 // Register
 router.post("/register", register);
@@ -15,7 +22,7 @@ router.post("/login", login);
 // Test route
 router.get("/", (req, res) => {
   res.json({
-    message: "Auth route working",
+    message: "Auth route working", 
   });
 });
 
