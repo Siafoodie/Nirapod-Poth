@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   register,
+  verifyOtp,
   login,
 } = require("../controllers/authController");
 const uploadPoliceId = require("../middleware/uploadPoliceId");
@@ -13,8 +14,11 @@ router.post(
   register
 ); 
 
-// Register
+// Register (step 1: send OTP)
 router.post("/register", register);
+
+// Verify OTP (step 2: create account)
+router.post("/verify-otp", verifyOtp);
 
 // Login
 router.post("/login", login);
