@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const Report = require("../models/Report");
@@ -10,7 +11,7 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 const MAX_VOTING_DISTANCE_KM = 5;
 
-// Convert database report into a privacy-safe response.
+// Convert database report into a privacy-safe response
 const toReportResponse = (report, voterId) => {
   const data = report.toObject ? report.toObject() : report;
   const votes = Array.isArray(data.votes) ? data.votes : [];
@@ -34,7 +35,6 @@ const toReportResponse = (report, voterId) => {
     score: upvotes - downvotes,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
-    // public badges only — never expose reporterUserId / email
     reporterRole: data.reporterRole || "anonymous",
     policeVerified: !!data.policeVerified,
     verifiedAt: data.verifiedAt || null,
@@ -54,7 +54,8 @@ const toReportResponse = (report, voterId) => {
 
   if (voterId) {
     response.userVote =
-      votes.find((item) => item.voterId === voterId)?.value || null;
+      votes.find((item) => item.voterId === voterId)?.value ||
+      null;
   }
 
   return response;
@@ -87,8 +88,13 @@ const calculateDistanceKm = (
   const toRadians = (degrees) => (degrees * Math.PI) / 180;
   const earthRadiusKm = 6371;
 
-  const latitudeDifference = toRadians(latitude2 - latitude1);
-  const longitudeDifference = toRadians(longitude2 - longitude1);
+  const latitudeDifference = toRadians(
+    latitude2 - latitude1
+  );
+
+  const longitudeDifference = toRadians(
+    longitude2 - longitude1
+  );
 
   const a =
     Math.sin(latitudeDifference / 2) ** 2 +
@@ -96,19 +102,24 @@ const calculateDistanceKm = (
       Math.cos(toRadians(latitude2)) *
       Math.sin(longitudeDifference / 2) ** 2;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const c =
+    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return earthRadiusKm * c;
 };
 
+// ========================================
 // GET /api/reports/nearby
+// ========================================
 router.get("/nearby", async (req, res) => {
   try {
     const latitude = Number(req.query.latitude);
     const longitude = Number(req.query.longitude);
 
     const radiusKm =
-      req.query.radiusKm === undefined ? 5 : Number(req.query.radiusKm);
+      req.query.radiusKm === undefined
+        ? 5
+        : Number(req.query.radiusKm);
 
     const limit = parseLimit(req.query.limit);
 
@@ -145,7 +156,9 @@ router.get("/nearby", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: reports.map((report) => toReportResponse(report)),
+      data: reports.map((report) =>
+        toReportResponse(report)
+      ),
     });
   } catch (error) {
     console.error("Nearby reports error:", error);
@@ -157,7 +170,9 @@ router.get("/nearby", async (req, res) => {
   }
 });
 
+// ========================================
 // GET /api/reports
+// ========================================
 router.get("/", async (req, res) => {
   try {
     const limit = parseLimit(req.query.limit);
@@ -177,7 +192,9 @@ router.get("/", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: reports.map((report) => toReportResponse(report)),
+      data: reports.map((report) =>
+        toReportResponse(report)
+      ),
     });
   } catch (error) {
     console.error("Get reports error:", error);
@@ -188,10 +205,70 @@ router.get("/", async (req, res) => {
     });
   }
 });
+// ========================================
+// GET /api/reports/police-risks
+// Public, police-verified risk assessments
+// ========================================
+router.get("/police-risks", async (req, res) => {
+  try {
+    const reports = await Report.find({
+      moderationStatus: "approved",
+      policeVerified: true,
+      verificationOutcome: "verified",
+      policeRiskLevel: {
+        $in: ["low", "medium", "high"],
+      },
+      "geo.type": "Point",
+      "geo.coordinates.1": { $exists: true },
+    })
+      .select(
+        "incidentType location geo policeRiskLevel policeRiskReason verifiedAt"
+      )
+      .sort({ verifiedAt: -1 })
+      .limit(100)
+      .lean();
 
+    const data = reports
+      .filter((report) => {
+        const coordinates = report.geo?.coordinates;
+
+        return (
+          Array.isArray(coordinates) &&
+          coordinates.length === 2 &&
+          coordinates.every(Number.isFinite) &&
+          coordinates[0] >= -180 &&
+          coordinates[0] <= 180 &&
+          coordinates[1] >= -90 &&
+          coordinates[1] <= 90
+        );
+      })
+      .map((report) => ({
+        _id: report._id,
+        incidentType: report.incidentType,
+        location: report.location,
+        geo: report.geo,
+        policeRiskLevel: report.policeRiskLevel,
+        policeRiskReason: report.policeRiskReason,
+        verifiedAt: report.verifiedAt,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error("Police risk map error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load police risk assessments",
+    });
+  }
+});
+// ========================================
 // POST /api/reports
-// Must be logged in. Optional anonymous flag hides identity publicly.
-// Body: { ..., anonymous: true | false }
+// ========================================
 router.post("/", protect, async (req, res) => {
   try {
     if (
@@ -215,9 +292,15 @@ router.post("/", protect, async (req, res) => {
       anonymous,
     } = req.body;
 
-    // US-14: offline queue dedupe
-    if (typeof clientId === "string" && clientId.trim()) {
-      const existing = await Report.findOne({ clientId: clientId.trim() });
+    // Offline queue deduplication
+    if (
+      typeof clientId === "string" &&
+      clientId.trim()
+    ) {
+      const existing = await Report.findOne({
+        clientId: clientId.trim(),
+      });
+
       if (existing) {
         return res.status(200).json({
           success: true,
@@ -233,7 +316,8 @@ router.post("/", protect, async (req, res) => {
       !incidentType.trim() ||
       typeof location !== "string" ||
       !location.trim() ||
-      (description !== undefined && typeof description !== "string")
+      (description !== undefined &&
+        typeof description !== "string")
     ) {
       return res.status(400).json({
         success: false,
@@ -242,13 +326,17 @@ router.post("/", protect, async (req, res) => {
       });
     }
 
-    const hasLatitude = latitude !== undefined && latitude !== null;
-    const hasLongitude = longitude !== undefined && longitude !== null;
+    const hasLatitude =
+      latitude !== undefined && latitude !== null;
+
+    const hasLongitude =
+      longitude !== undefined && longitude !== null;
 
     if (hasLatitude !== hasLongitude) {
       return res.status(400).json({
         success: false,
-        message: "latitude and longitude must be provided together",
+        message:
+          "latitude and longitude must be provided together",
       });
     }
 
@@ -262,7 +350,10 @@ router.post("/", protect, async (req, res) => {
       if (
         latitude === "" ||
         longitude === "" ||
-        !isValidCoordinates(parsedLatitude, parsedLongitude)
+        !isValidCoordinates(
+          parsedLatitude,
+          parsedLongitude
+        )
       ) {
         return res.status(400).json({
           success: false,
@@ -272,13 +363,12 @@ router.post("/", protect, async (req, res) => {
       }
     }
 
-    // --- Identity / anonymity ---
-    // Must be registered (protect). anonymous=true → public badge "anonymous"
-    // anonymous=false → user or police badge from account role
-    const postAnonymously = anonymous === true || anonymous === "true";
+    // Reporter identity
+    const postAnonymously =
+      anonymous === true || anonymous === "true";
 
     let reporterRole;
-    let reporterUserId = req.user._id; // kept for audit; never sent in toReportResponse
+    const reporterUserId = req.user._id;
 
     if (postAnonymously) {
       reporterRole = "anonymous";
@@ -297,14 +387,20 @@ router.post("/", protect, async (req, res) => {
       reporterUserId,
     };
 
-    if (typeof clientId === "string" && clientId.trim()) {
+    if (
+      typeof clientId === "string" &&
+      clientId.trim()
+    ) {
       reportData.clientId = clientId.trim();
     }
 
     if (hasLatitude) {
       reportData.geo = {
         type: "Point",
-        coordinates: [parsedLongitude, parsedLatitude],
+        coordinates: [
+          parsedLongitude,
+          parsedLatitude,
+        ],
       };
     }
 
@@ -324,12 +420,17 @@ router.post("/", protect, async (req, res) => {
     if (
       error.code === 11000 &&
       (error.keyPattern?.clientId ||
-        String(error.message || "").includes("clientId"))
+        String(error.message || "").includes(
+          "clientId"
+        ))
     ) {
       try {
         const existing = await Report.findOne({
-          clientId: String(req.body?.clientId || "").trim(),
+          clientId: String(
+            req.body?.clientId || ""
+          ).trim(),
         });
+
         if (existing) {
           return res.status(200).json({
             success: true,
@@ -339,7 +440,10 @@ router.post("/", protect, async (req, res) => {
           });
         }
       } catch (lookupError) {
-        console.error("Duplicate lookup error:", lookupError);
+        console.error(
+          "Duplicate lookup error:",
+          lookupError
+        );
       }
     }
 
@@ -350,55 +454,21 @@ router.post("/", protect, async (req, res) => {
   }
 });
 
-// POST /api/reports/:id/verify — police only
-router.post("/:id/verify", protect, async (req, res) => {
-  try {
-    if (req.user.role !== "police") {
-      return res.status(403).json({
-        success: false,
-        message: "Only police officers can verify reports",
-      });
-    }
-
-    if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid report ID",
-      });
-    }
-
-    const report = await Report.findByIdAndUpdate(
-      req.params.id,
-      {
-        policeVerified: true,
-        verifiedBy: req.user._id,
-        verifiedAt: new Date(),
-      },
-      { new: true }
-    );
-
-    if (!report) {
-      return res.status(404).json({
-        success: false,
-        message: "Report not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Report marked as police-verified",
-      data: toReportResponse(report),
-    });
-  } catch (error) {
-    console.error("Verify report error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to verify report",
-    });
-  }
+// ========================================
+// OLD POLICE VERIFICATION ENDPOINT
+// DISABLED - USE NEW POLICE API
+// ========================================
+router.post("/:id/verify", protect, (req, res) => {
+  return res.status(410).json({
+    success: false,
+    message:
+      "Use the Police Dashboard investigation and verification workflow.",
+  });
 });
 
+// ========================================
 // POST /api/reports/:reportId/vote
+// ========================================
 router.post(
   "/:reportId/vote",
   protect,
@@ -425,13 +495,24 @@ router.post(
         });
       }
 
-      const { vote, latitude, longitude } = req.body;
-      const normalizedVoterId = String(req.user._id);
+      const {
+        vote,
+        latitude,
+        longitude,
+      } = req.body;
 
-      if (vote !== "upvote" && vote !== "downvote") {
+      const normalizedVoterId = String(
+        req.user._id
+      );
+
+      if (
+        vote !== "upvote" &&
+        vote !== "downvote"
+      ) {
         return res.status(400).json({
           success: false,
-          message: 'vote must be either "upvote" or "downvote"',
+          message:
+            'vote must be either "upvote" or "downvote"',
         });
       }
 
@@ -445,15 +526,20 @@ router.post(
         longitude === undefined ||
         longitude === null ||
         longitude === "" ||
-        !isValidCoordinates(userLatitude, userLongitude)
+        !isValidCoordinates(
+          userLatitude,
+          userLongitude
+        )
       ) {
         return res.status(400).json({
           success: false,
-          message: "Valid latitude and longitude are required to vote",
+          message:
+            "Valid latitude and longitude are required to vote",
         });
       }
 
-      const existingReport = await Report.findById(reportId);
+      const existingReport =
+        await Report.findById(reportId);
 
       if (!existingReport) {
         return res.status(404).json({
@@ -462,14 +548,19 @@ router.post(
         });
       }
 
-      if (existingReport.moderationStatus !== "approved") {
+      if (
+        existingReport.moderationStatus !==
+        "approved"
+      ) {
         return res.status(403).json({
           success: false,
-          message: "This report is not available for voting",
+          message:
+            "This report is not available for voting",
         });
       }
 
-      const reportCoordinates = existingReport.geo?.coordinates;
+      const reportCoordinates =
+        existingReport.geo?.coordinates;
 
       if (
         !Array.isArray(reportCoordinates) ||
@@ -482,10 +573,20 @@ router.post(
         });
       }
 
-      const reportLongitude = Number(reportCoordinates[0]);
-      const reportLatitude = Number(reportCoordinates[1]);
+      const reportLongitude = Number(
+        reportCoordinates[0]
+      );
 
-      if (!isValidCoordinates(reportLatitude, reportLongitude)) {
+      const reportLatitude = Number(
+        reportCoordinates[1]
+      );
+
+      if (
+        !isValidCoordinates(
+          reportLatitude,
+          reportLongitude
+        )
+      ) {
         return res.status(400).json({
           success: false,
           message:
@@ -500,7 +601,9 @@ router.post(
         reportLongitude
       );
 
-      if (distanceKm > MAX_VOTING_DISTANCE_KM) {
+      if (
+        distanceKm > MAX_VOTING_DISTANCE_KM
+      ) {
         return res.status(403).json({
           success: false,
           message:
@@ -508,71 +611,100 @@ router.post(
         });
       }
 
-      const report = await Report.findOneAndUpdate(
-        {
-          _id: reportId,
-          moderationStatus: "approved",
-        },
-        [
+      // Atomic vote update
+      const report =
+        await Report.findOneAndUpdate(
           {
-            $set: {
-              votes: {
-                $concatArrays: [
-                  {
-                    $filter: {
-                      input: { $ifNull: ["$votes", []] },
-                      as: "existingVote",
-                      cond: {
-                        $ne: [
-                          "$$existingVote.voterId",
-                          normalizedVoterId,
-                        ],
+            _id: reportId,
+            moderationStatus: "approved",
+          },
+          [
+            {
+              $set: {
+                votes: {
+                  $concatArrays: [
+                    {
+                      $filter: {
+                        input: {
+                          $ifNull: [
+                            "$votes",
+                            [],
+                          ],
+                        },
+                        as: "existingVote",
+                        cond: {
+                          $ne: [
+                            "$$existingVote.voterId",
+                            normalizedVoterId,
+                          ],
+                        },
                       },
                     },
-                  },
-                  [
-                    {
-                      voterId: normalizedVoterId,
-                      value: vote,
-                    },
+                    [
+                      {
+                        voterId:
+                          normalizedVoterId,
+                        value: vote,
+                      },
+                    ],
                   ],
-                ],
+                },
               },
             },
-          },
-        ],
-        { new: true, updatePipeline: true }
-      );
+          ],
+          {
+            new: true,
+            updatePipeline: true,
+          }
+        );
 
       if (!report) {
         return res.status(409).json({
           success: false,
-          message: "Report is no longer available for voting",
+          message:
+            "Report is no longer available for voting",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: "Vote submitted successfully.",
-        data: toReportResponse(report, normalizedVoterId),
+        message:
+          "Vote submitted successfully.",
+        data: toReportResponse(
+          report,
+          normalizedVoterId
+        ),
       });
     } catch (error) {
       console.error("Vote error:", error);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      console.error(
+        "Error message:",
+        error.message
+      );
+      console.error(
+        "Error stack:",
+        error.stack
+      );
 
       return res.status(500).json({
         success: false,
-        message: "Failed to submit vote",
+        message:
+          "Failed to submit vote",
       });
     }
   }
 );
 
+// ========================================
 // GET /api/reports/:id/score
+// ========================================
 router.get("/:id/score", async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (
+      !mongoose.isValidObjectId(
+        req.params.id
+      )
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid report ID",
@@ -600,13 +732,17 @@ router.get("/:id/score", async (req, res) => {
       score: score.score,
     });
   } catch (error) {
-    console.error("Vote score error:", error);
+    console.error(
+      "Vote score error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to get vote score",
+      message:
+        "Failed to get vote score",
     });
   }
 });
 
-module.exports = router;  
+module.exports = router;

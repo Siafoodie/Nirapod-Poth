@@ -1,4 +1,4 @@
-
+import PoliceDashboard from "./pages/PoliceDashboard.jsx";
 import {
   BrowserRouter,
   Routes,
@@ -75,6 +75,10 @@ function AppContent() {
 
         {/* Incident Reports */}
         <Route path="/report" element={<ReportForm />} />
+        <Route
+  path="/police/dashboard"
+  element={<PoliceDashboard />}
+/>
         <Route
           path="/nearby-reports"
           element={<NearbyReports />}

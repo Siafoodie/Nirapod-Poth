@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
 
+import React, { useState, useEffect, useRef } from "react";
 import {
   Link,
   NavLink,
@@ -66,51 +66,15 @@ function getProfileImageUrl(path) {
 // =====================================
 
 const userMenuItems = [
-  {
-    label: "Home",
-    path: "/home",
-    icon: House,
-  },
-  {
-    label: "Emergency SOS",
-    path: "/emergency-sos",
-    icon: Siren,
-  },
-  {
-    label: "I'm Safe",
-    path: "/imsafe",
-    icon: ShieldCheck,
-  },
-  {
-    label: "Report Incident",
-    path: "/report",
-    icon: FileWarning,
-  },
-  {
-    label: "Nearby Reports",
-    path: "/nearby-reports",
-    icon: MapPin,
-  },
-  {
-    label: "Safe Places",
-    path: "/safe-places",
-    icon: Map,
-  },
-  {
-    label: "Route Safety",
-    path: "/route-safety",
-    icon: Route,
-  },
-  {
-    label: "Trusted Contacts",
-    path: "/trusted-contact",
-    icon: Users,
-  },
-  {
-    label: "Helplines",
-    path: "/helplines",
-    icon: PhoneCall,
-  },
+  { label: "Home", path: "/home", icon: House },
+  { label: "Emergency SOS", path: "/emergency-sos", icon: Siren },
+  { label: "I'm Safe", path: "/imsafe", icon: ShieldCheck },
+  { label: "Report Incident", path: "/report", icon: FileWarning },
+  { label: "Nearby Reports", path: "/nearby-reports", icon: MapPin },
+  { label: "Safe Places", path: "/safe-places", icon: Map },
+  { label: "Route Safety", path: "/route-safety", icon: Route },
+  { label: "Trusted Contacts", path: "/trusted-contact", icon: Users },
+  { label: "Helplines", path: "/helplines", icon: PhoneCall },
 ];
 
 // =====================================
@@ -131,35 +95,32 @@ const adminMenuItems = [
 ];
 
 // =====================================
-// MOBILE BOTTOM NAVIGATION
+// POLICE MENU ITEMS
 // =====================================
 
-const mobileNavItems = [
+const policeMenuItems = [
   {
-    label: "Home",
-    path: "/home",
-    icon: House,
+    label: "Police Dashboard",
+    path: "/police/dashboard",
+    icon: LayoutDashboard,
   },
   {
-    label: "Places",
-    path: "/safe-places",
-    icon: MapPin,
-  },
-  {
-    label: "SOS",
-    path: "/emergency-sos",
-    icon: Siren,
-  },
-  {
-    label: "Reports",
-    path: "/nearby-reports",
-    icon: FileWarning,
-  },
-  {
-    label: "Profile",
+    label: "My Profile",
     path: "/profile",
     icon: UserRound,
   },
+];
+
+// =====================================
+// MOBILE NAVIGATION
+// =====================================
+
+const mobileNavItems = [
+  { label: "Home", path: "/home", icon: House },
+  { label: "Places", path: "/safe-places", icon: MapPin },
+  { label: "SOS", path: "/emergency-sos", icon: Siren },
+  { label: "Reports", path: "/nearby-reports", icon: FileWarning },
+  { label: "Profile", path: "/profile", icon: UserRound },
 ];
 
 const adminMobileNavItems = [
@@ -175,17 +136,26 @@ const adminMobileNavItems = [
   },
 ];
 
+const policeMobileNavItems = [
+  {
+    label: "Dashboard",
+    path: "/police/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: UserRound,
+  },
+];
+
 // =====================================
 // NAVBAR COMPONENT
 // =====================================
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const [currentUser, setCurrentUser] = useState(
-    getCurrentUser
-  );
-
+  const [currentUser, setCurrentUser] = useState(getCurrentUser);
   const [avatarFailed, setAvatarFailed] = useState(false);
 
   const navigate = useNavigate();
@@ -195,25 +165,69 @@ export default function Navbar() {
   const panelRef = useRef(null);
 
   // =====================================
-  // ADMIN DETECTION
+  // ROLE DETECTION
   // =====================================
 
-  const isAdmin =
-    String(currentUser?.role || "")
-      .trim()
-      .toLowerCase() === "admin";
+  const role = String(currentUser?.role || "")
+    .trim()
+    .toLowerCase();
+
+  const isAdmin = role === "admin";
+  const isPolice = role === "police";
 
   const visibleMenuItems = isAdmin
     ? adminMenuItems
+    : isPolice
+    ? policeMenuItems
     : userMenuItems;
 
   const bottomItems = isAdmin
     ? adminMobileNavItems
+    : isPolice
+    ? policeMobileNavItems
     : mobileNavItems;
 
   const homePath = isAdmin
     ? "/admin/reports"
+    : isPolice
+    ? "/police/dashboard"
     : "/home";
+
+  const headerSubtitle = isAdmin
+    ? "Administration Panel"
+    : isPolice
+    ? "Police Operations"
+    : "Your Safety Companion";
+
+  const sidebarTitle = isAdmin
+    ? "ADMIN PANEL"
+    : isPolice
+    ? "POLICE PANEL"
+    : "MY NIRAPOD POTH";
+
+  const accountType = isAdmin
+    ? "Administrator Account"
+    : isPolice
+    ? "Police Account"
+    : "Personal Account";
+
+  const navigationTitle = isAdmin
+    ? "ADMIN NAVIGATION"
+    : isPolice
+    ? "POLICE NAVIGATION"
+    : "QUICK NAVIGATION";
+
+  const footerTitle = isAdmin
+    ? "Manage reports responsibly."
+    : isPolice
+    ? "Investigate and verify reports."
+    : "Stay aware. Stay connected.";
+
+  const footerSubtitle = isAdmin
+    ? "Nirapod Poth Administration"
+    : isPolice
+    ? "Nirapod Poth Police Operations"
+    : "Your journey matters 💜";
 
   // =====================================
   // PROFILE INFORMATION
@@ -299,10 +313,7 @@ export default function Navbar() {
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [menuOpen]);
 
@@ -348,9 +359,7 @@ export default function Navbar() {
 
   return (
     <>
-      {/* =====================================
-          MAIN HEADER
-      ===================================== */}
+      {/* MAIN HEADER */}
 
       <header className="np-nav-header">
         <Link
@@ -368,11 +377,7 @@ export default function Navbar() {
               NIRAPOD <span>POTH</span>
             </strong>
 
-            <small>
-              {isAdmin
-                ? "Administration Panel"
-                : "Your Safety Companion"}
-            </small>
+            <small>{headerSubtitle}</small>
           </div>
         </Link>
 
@@ -381,23 +386,13 @@ export default function Navbar() {
         <button
           ref={toggleRef}
           type="button"
-          className={`np-nav-toggle ${
-            menuOpen ? "open" : ""
-          }`}
-          aria-label={
-            menuOpen ? "Close menu" : "Open menu"
-          }
+          className={`np-nav-toggle ${menuOpen ? "open" : ""}`}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           aria-controls="np-sidebar"
-          onClick={() =>
-            setMenuOpen((previous) => !previous)
-          }
+          onClick={() => setMenuOpen((previous) => !previous)}
         >
-          {menuOpen ? (
-            <X size={21} />
-          ) : (
-            <Menu size={21} />
-          )}
+          {menuOpen ? <X size={21} /> : <Menu size={21} />}
 
           <span>
             {menuOpen ? "Close Menu" : "Explore Menu"}
@@ -405,9 +400,7 @@ export default function Navbar() {
         </button>
       </header>
 
-      {/* =====================================
-          BACKDROP
-      ===================================== */}
+      {/* BACKDROP */}
 
       {menuOpen && (
         <button
@@ -418,16 +411,12 @@ export default function Navbar() {
         />
       )}
 
-      {/* =====================================
-          SIDEBAR
-      ===================================== */}
+      {/* SIDEBAR */}
 
       <aside
         ref={panelRef}
         id="np-sidebar"
-        className={`np-nav-sidebar ${
-          menuOpen ? "show" : ""
-        }`}
+        className={`np-nav-sidebar ${menuOpen ? "show" : ""}`}
         aria-label="Main navigation"
         aria-hidden={!menuOpen}
         inert={!menuOpen}
@@ -437,12 +426,7 @@ export default function Navbar() {
         <div className="np-nav-sidebar-top">
           <div className="np-nav-sidebar-title">
             <Sparkles size={16} />
-
-            <span>
-              {isAdmin
-                ? "ADMIN PANEL"
-                : "MY NIRAPOD POTH"}
-            </span>
+            <span>{sidebarTitle}</span>
           </div>
 
           <button
@@ -455,9 +439,7 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* =====================================
-            PROFILE CARD
-        ===================================== */}
+        {/* PROFILE CARD */}
 
         <Link
           to="/profile"
@@ -482,11 +464,7 @@ export default function Navbar() {
           <div className="np-profile-details">
             <strong>{displayName}</strong>
 
-            <span>
-              {isAdmin
-                ? "Administrator Account"
-                : "Personal Account"}
-            </span>
+            <span>{accountType}</span>
 
             <small>
               View Profile
@@ -500,59 +478,44 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* =====================================
-            NAVIGATION LABEL
-        ===================================== */}
+        {/* NAVIGATION LABEL */}
 
         <div className="np-menu-section-label">
-          {isAdmin
-            ? "ADMIN NAVIGATION"
-            : "QUICK NAVIGATION"}
+          {navigationTitle}
         </div>
 
-        {/* =====================================
-            SIDEBAR LINKS
-        ===================================== */}
+        {/* SIDEBAR LINKS */}
 
         <nav
           className="np-nav-list"
           aria-label="Sidebar links"
         >
-          {visibleMenuItems.map(
-            ({ label, path, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  `np-nav-link ${
-                    isActive ? "active" : ""
-                  }`
-                }
-              >
-                <span className="np-nav-link-icon">
-                  <Icon
-                    size={19}
-                    strokeWidth={1.9}
-                  />
-                </span>
+          {visibleMenuItems.map(({ label, path, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `np-nav-link ${isActive ? "active" : ""}`
+              }
+            >
+              <span className="np-nav-link-icon">
+                <Icon size={19} strokeWidth={1.9} />
+              </span>
 
-                <span className="np-nav-link-label">
-                  {label}
-                </span>
+              <span className="np-nav-link-label">
+                {label}
+              </span>
 
-                <ChevronRight
-                  size={16}
-                  className="np-nav-arrow"
-                />
-              </NavLink>
-            )
-          )}
+              <ChevronRight
+                size={16}
+                className="np-nav-arrow"
+              />
+            </NavLink>
+          ))}
         </nav>
 
-        {/* =====================================
-            SIDEBAR BOTTOM
-        ===================================== */}
+        {/* SIDEBAR BOTTOM */}
 
         <div className="np-nav-sidebar-bottom">
           <button
@@ -572,57 +535,44 @@ export default function Navbar() {
             <ShieldCheck size={22} />
 
             <div>
-              <strong>
-                {isAdmin
-                  ? "Manage reports responsibly."
-                  : "Stay aware. Stay connected."}
-              </strong>
-
-              <small>
-                {isAdmin
-                  ? "Nirapod Poth Administration"
-                  : "Your journey matters 💜"}
-              </small>
+              <strong>{footerTitle}</strong>
+              <small>{footerSubtitle}</small>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* =====================================
-          MOBILE BOTTOM NAVIGATION
-      ===================================== */}
+      {/* MOBILE BOTTOM NAVIGATION */}
 
       {!hideBottomNav && (
         <nav
           className="np-mobile-bottom-nav"
           aria-label="Mobile navigation"
         >
-          {bottomItems.map(
-            ({ label, path, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  `np-mobile-nav-item ${
-                    isActive ? "active" : ""
-                  } ${
-                    path === "/emergency-sos"
-                      ? "np-mobile-sos"
-                      : ""
-                  }`
-                }
-              >
-                <Icon
-                  size={22}
-                  strokeWidth={1.9}
-                  aria-hidden="true"
-                />
+          {bottomItems.map(({ label, path, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `np-mobile-nav-item ${
+                  isActive ? "active" : ""
+                } ${
+                  path === "/emergency-sos"
+                    ? "np-mobile-sos"
+                    : ""
+                }`
+              }
+            >
+              <Icon
+                size={22}
+                strokeWidth={1.9}
+                aria-hidden="true"
+              />
 
-                <span>{label}</span>
-              </NavLink>
-            )
-          )}
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </nav>
       )}
     </>

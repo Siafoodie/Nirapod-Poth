@@ -32,14 +32,17 @@ export const sanitizeUser = (user) => {
     safeUser.profileImage = user.profileImage;
   }
 
-  // Preserve role for role-based navigation
-  if (typeof user.role === "string") {
-    const role = user.role.trim().toLowerCase();
+  // Preserve supported roles for role-based navigation
+  const role =
+    typeof user.role === "string"
+      ? user.role.trim().toLowerCase()
+      : "user";
 
-    safeUser.role = role === "admin" ? "admin" : "user";
-  } else {
-    safeUser.role = "user";
-  }
+  const allowedRoles = ["admin", "police", "user"];
+
+  safeUser.role = allowedRoles.includes(role)
+    ? role
+    : "user";
 
   return safeUser;
 };

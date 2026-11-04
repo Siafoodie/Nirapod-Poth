@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const path = require("path");
+const policeRoutes = require("./routes/policeRoutes");
 
 const errorHandler = require("./middleware/errorHandler");
 
@@ -30,6 +31,7 @@ app.use(
     },
   })
 );
+
 
 app.use(cors());
 
@@ -78,7 +80,7 @@ app.get("/api/health", (req, res) => {
 // =====================================
 // API Routes
 // =====================================
-
+app.use("/api/police", policeRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/live", liveSessionRoutes);

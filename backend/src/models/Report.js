@@ -167,6 +167,67 @@ const reportSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    
+    // Police investigation
+    investigationStatus: {
+      type: String,
+      enum: [
+        "not_started",
+        "investigating",
+        "completed",
+      ],
+      default: "not_started",
+      index: true,
+    },
+
+    investigationNote: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 2000,
+    },
+
+    investigatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    investigatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Police investigation outcome
+    verificationOutcome: {
+      type: String,
+      enum: [
+        "unreviewed",
+        "verified",
+        "unsubstantiated",
+      ],
+      default: "unreviewed",
+    },
+
+    // Police-assessed location risk
+    policeRiskLevel: {
+      type: String,
+      enum: [
+        "unassessed",
+        "low",
+        "medium",
+        "high",
+      ],
+      default: "unassessed",
+    },
+
+    policeRiskReason: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 1000,
+    },
+
   },
   {
     timestamps: true,
